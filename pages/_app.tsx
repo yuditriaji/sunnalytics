@@ -10,7 +10,14 @@ export default function App({ Component, pageProps }: AppProps) {
         <title>Sunnalytics</title>
         <meta name="description" content="Sunnalytics - Token Analytics Platform" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <link rel="icon" href="/favicon.ico" />
+        <meta name="theme-color" content="#111827" /> {/* Matches bg-gray-900 */}
+        <link rel="icon" href="/favicon.ico" sizes="any" />
+        <link rel="icon" type="image/png" href="/favicon-16x16.png" sizes="16x16" />
+        <link rel="icon" type="image/png" href="/favicon-32x32.png" sizes="32x32" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+        <link rel="icon" type="image/png" href="/android-chrome-192x192.png" sizes="192x192" />
+        <link rel="icon" type="image/png" href="/android-chrome-512x512.png" sizes="512x512" />
+        <link rel="manifest" href="/site.webmanifest" />
       </Head>
       <Component {...pageProps} />
     </div>
