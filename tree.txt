@@ -1,0 +1,39 @@
+Project Tree (excluding node_modules, .next, package-lock.json):
+
+├── .env
+├── .gitignore
+├── README.md
+├── all_files_combined.txt
+├── combine_files.py
+├── components
+│   ├── BottomNav.tsx
+│   ├── FilterDrawer.tsx
+│   ├── TokenTable.tsx
+│   └── WelcomeScreen.tsx
+├── eslint.config.mjs
+├── generate_tree.py
+├── hooks
+│   └── useTokenData.ts
+├── next-env.d.ts
+├── next.config.js
+├── package.json
+├── pages
+│   ├── _app.tsx
+│   ├── api
+│   ├── charts.tsx
+│   ├── index.tsx
+│   ├── settings.tsx
+│   └── welcome.tsx
+├── postcss.config.js
+├── src
+├── stores
+│   └── useTokenStore.ts
+├── styles
+│   └── globals.css
+├── tailwind.config.js
+├── tree.txt
+├── tsconfig.json
+└── utils
+    ├── api.ts
+    ├── fonts.ts
+    └── tokenStats.ts

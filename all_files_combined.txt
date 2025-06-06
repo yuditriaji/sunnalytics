@@ -1,0 +1,1002 @@
+
+=== .\.gitignore ===
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# env files (can opt-in for committing if needed)
+.env*
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+=== .\all_files_combined.txt ===
+
+=== .\eslint.config.mjs ===
+import { dirname } from "path";
+import { fileURLToPath } from "url";
+import { FlatCompat } from "@eslint/eslintrc";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+const compat = new FlatCompat({
+  baseDirectory: __dirname,
+});
+
+const eslintConfig = [
+  ...compat.extends("next/core-web-vitals", "next/typescript"),
+];
+
+export default eslintConfig;
+
+=== .\next-env.d.ts ===
+/// <reference types="next" />
+/// <reference types="next/image-types/global" />
+
+// NOTE: This file should not be edited
+// see https://nextjs.org/docs/pages/building-your-application/configuring/typescript for more information.
+
+=== .\next.config.js ===
+const withPWA = require('next-pwa')({
+  dest: 'public',
+  register: true,
+  skipWaiting: true,
+  disable: process.env.NODE_ENV === 'development' // Disable PWA in dev for faster reloads
+});
+
+const nextConfig = {
+  reactStrictMode: true,
+  swcMinify: true, // Enable SWC minification for faster builds
+  images: {
+    domains: ['localhost'], // Add domains for image optimization if needed
+  },
+  experimental: {
+    optimizePackageImports: ['antd', '@ant-design/icons'], // Optimize Ant Design imports
+  },
+};
+
+module.exports = withPWA(nextConfig);
+=== .\package.json ===
+{
+  "name": "sunnalytics-dev",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx}\""
+  },
+  "dependencies": {
+    "framer-motion": "^12.14.0",
+    "localforage": "^1.10.0",
+    "next": "^14.2.29",
+    "next-pwa": "^5.6.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-icons": "^5.3.0",
+    "swr": "^2.2.5",
+    "tailwindcss": "^3.4.1",
+    "zustand": "^5.0.0-rc.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.7.7",
+    "@types/react": "^18.3.11",
+    "@types/react-dom": "^18.3.1",
+    "autoprefixer": "^10.4.19",
+    "eslint": "^8.57.1",
+    "eslint-config-next": "^14.2.29",
+    "postcss": "^8.4.38",
+    "prettier": "^3.3.3",
+    "typescript": "^5.6.3"
+  }
+}
+=== .\postcss.config.js ===
+module.exports = {
+plugins: {
+    tailwindcss: {},
+    autoprefixer: {},
+},
+};
+=== .\tailwind.config.js ===
+/** @type {import('tailwindcss').Config} */
+module.exports = {
+  content: [
+    "./pages/**/*.{js,ts,jsx,tsx}",
+    "./components/**/*.{js,ts,jsx,tsx}",
+  ],
+  theme: {
+    extend: {},
+  },
+  plugins: [],
+};
+=== .\tree.txt ===
+Project Tree (excluding node_modules, .next, package-lock.json):
+
+├── .env
+├── .gitignore
+├── README.md
+├── all_files_combined.txt
+├── combine_files.py
+├── components
+│   ├── BottomNav.tsx
+│   ├── FilterDrawer.tsx
+│   ├── TokenTable.tsx
+│   └── WelcomeScreen.tsx
+├── eslint.config.mjs
+├── generate_tree.py
+├── hooks
+│   └── useTokenData.ts
+├── next-env.d.ts
+├── next.config.js
+├── package.json
+├── pages
+│   ├── _app.tsx
+│   ├── api
+│   ├── charts.tsx
+│   ├── index.tsx
+│   ├── settings.tsx
+│   └── welcome.tsx
+├── postcss.config.js
+├── src
+├── stores
+│   └── useTokenStore.ts
+├── styles
+│   └── globals.css
+├── tailwind.config.js
+├── tree.txt
+├── tsconfig.json
+└── utils
+    ├── api.ts
+    ├── fonts.ts
+    └── tokenStats.ts
+=== .\tsconfig.json ===
+{
+  "compilerOptions": {
+    "target": "ES2017",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "preserve",
+    "incremental": true,
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "postcss.config.js"],
+  "exclude": ["node_modules"]
+}
+
+=== .\components\BottomNav.tsx ===
+import React from 'react';
+import { useRouter } from 'next/router';
+import { FaHome, FaChartLine, FaCog, FaFilter } from 'react-icons/fa';
+
+interface BottomNavProps {
+  className?: string;
+}
+
+const BottomNav: React.FC<BottomNavProps> = ({ className }) => {
+  const router = useRouter();
+  const { pathname } = router;
+
+  const menuItems = [
+    { key: '/', label: 'Home', icon: <FaHome className="h-5 w-5" /> },
+    { key: '/analytics', label: 'Analytics', icon: <FaChartLine className="h-5 w-5" /> },
+    { key: '/filter', label: 'Filter', icon: <FaFilter className="h-5 w-5" /> },
+    { key: '/settings', label: 'Settings', icon: <FaCog className="h-5 w-5" /> },
+  ];
+
+  const handleClick = (key: string) => {
+    router.push(key);
+  };
+
+  return (
+    <nav
+      className={`fixed bottom-0 left-0 right-0 bg-white shadow-lg border-t border-gray-200 ${className}`}
+    >
+      <div className="flex justify-around items-center h-16">
+        {menuItems.map(item => (
+          <button
+            key={item.key}
+            onClick={() => handleClick(item.key)}
+            className={`flex flex-col items-center justify-center w-full h-full text-gray-600 hover:text-blue-500 transition-colors ${
+              pathname === item.key ? 'text-blue-500' : ''
+            }`}
+          >
+            {item.icon}
+            <span className="text-xs mt-1">{item.label}</span>
+          </button>
+        ))}
+      </div>
+    </nav>
+  );
+};
+
+export default BottomNav;
+=== .\components\FilterDrawer.tsx ===
+import React from 'react';
+import { Drawer, Form, Input, Select, Button, Slider, Space } from 'antd';
+import { useTokenStore } from '../stores/useTokenStore';
+
+interface FilterDrawerProps {
+  visible: boolean;
+  onClose: () => void;
+}
+
+const FilterDrawer: React.FC<FilterDrawerProps> = ({ visible, onClose }) => {
+  const [form] = Form.useForm();
+  const { setFilters } = useTokenStore();
+
+  const handleApply = () => {
+    const values = form.getFieldsValue();
+    setFilters({
+      category: values.category,
+      priceRange: values.priceRange,
+      marketCapRange: values.marketCapRange,
+      search: values.search,
+    });
+    onClose();
+  };
+
+  return (
+    <Drawer
+      title="Filter Tokens"
+      placement="bottom"
+      onClose={onClose}
+      open={visible}
+      height={400}
+      extra={
+        <Space>
+          <Button
+            onClick={() => {
+              form.resetFields();
+              setFilters({});
+            }}
+          >
+            Reset
+          </Button>
+          <Button type="primary" onClick={handleApply}>
+            Apply
+          </Button>
+        </Space>
+      }
+    >
+      <Form form={form} layout="vertical">
+        <Form.Item name="category" label="Category">
+          <Select
+            mode="multiple"
+            placeholder="Select categories"
+            options={[
+              { label: 'Memecoin', value: 'memecoin' },
+              { label: 'DeFi', value: 'defi' },
+              { label: 'Altcoin', value: 'altcoin' },
+              { label: 'Bitcoin', value: 'bitcoin' },
+            ]}
+          />
+        </Form.Item>
+        <Form.Item name="priceRange" label="Price Range (USD)">
+          <Slider range min={0} max={150000} step={1000} defaultValue={[0, 150000]} />
+        </Form.Item>
+        <Form.Item name="marketCapRange" label="Market Cap Range (USD)">
+          <Slider
+            range
+            min={0}
+            max={3000000000000}
+            step={100000000}
+            defaultValue={[0, 3000000000000]}
+          />
+        </Form.Item>
+        <Form.Item name="search" label="Search">
+          <Input placeholder="Search by name or symbol" />
+        </Form.Item>
+      </Form>
+    </Drawer>
+  );
+};
+
+export default FilterDrawer;
+=== .\components\TokenTable.tsx ===
+  import React, { useState, memo } from 'react';
+  import { useTokenStore } from '../stores/useTokenStore';
+
+  interface Token {
+    id: string;
+    name: string;
+    symbol: string;
+    category: string;
+    marketCap?: number;
+    volume24h?: number;
+    price?: number;
+    transferVolume24h?: number;
+    createdAt: string;
+    updatedAt: string;
+    stats?: {
+      priceChange24h: number;
+      volatilityScore24h: number;
+      liquidityScore: number;
+      transferVolume24h: number;
+    };
+  }
+
+  const TokenTable: React.FC = memo(() => {
+    const { filteredTokens } = useTokenStore();
+    const [visibleColumns, setVisibleColumns] = useState<string[]>([
+      'name',
+      'symbol',
+      'category',
+      'price',
+      'marketCap',
+      'volume24h',
+      'transferVolume24h',
+      'volatilityScore24h',
+    ]);
+
+    const toggleColumn = (key: string) => {
+      setVisibleColumns(prev =>
+        prev.includes(key) ? prev.filter(col => col !== key) : [...prev, key]
+      );
+    };
+
+    const columns = [
+      'name',
+      'symbol',
+      'category',
+      'price',
+      'marketCap',
+      'volume24h',
+      'transferVolume24h',
+      'volatilityScore24h',
+    ].filter(col => visibleColumns.includes(col));
+
+    return (
+      <div className="p-4">
+        <div className="mb-4 overflow-x-auto whitespace-nowrap">
+          <div className="flex space-x-2">
+            <span className="font-medium">Toggle Columns:</span>
+            {[
+              'name',
+              'symbol',
+              'category',
+              'price',
+              'marketCap',
+              'volume24h',
+              'transferVolume24h',
+              'volatilityScore24h',
+            ].map(key => (
+              <button
+                key={key}
+                onClick={() => toggleColumn(key)}
+                className={`px-2 py-1 rounded text-sm ${
+                  visibleColumns.includes(key)
+                    ? 'bg-blue-500 text-white'
+                    : 'bg-gray-200 text-gray-700'
+                }`}
+              >
+                {key
+                  .replace(/([A-Z])/g, ' $1')
+                  .replace(/^./, str => str.toUpperCase())}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                {columns.map(col => (
+                  <th
+                    key={col}
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  >
+                    {col}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {filteredTokens.map((token: Token) => (
+                <tr key={token.id}>
+                  {visibleColumns.includes('name') && (
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <span>{token.name}</span>
+                        <span className="ml-2 text-sm text-blue-600">
+                          {token.symbol.toUpperCase()}
+                        </span>
+                      </div>
+                    </td>
+                  )}
+                  {visibleColumns.includes('symbol') && (
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {token.symbol.toUpperCase()}
+                    </td>
+                  )}
+                  {visibleColumns.includes('category') && (
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span
+                        className={`px-2 py-1 rounded text-sm ${
+                          token.category === 'memecoin'
+                            ? 'bg-red-100 text-red-800'
+                            : token.category === 'defi'
+                            ? 'bg-blue-100 text-blue-800'
+                            : token.category === 'bitcoin'
+                            ? 'bg-yellow-100 text-yellow-800'
+                            : 'bg-green-100 text-green-800'
+                        }`}
+                      >
+                        {token.category.toUpperCase()}
+                      </span>
+                    </td>
+                  )}
+                  {visibleColumns.includes('price') && (
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {token.price
+                        ? `$${token.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 6 })}`
+                        : '-'}
+                    </td>
+                  )}
+                  {visibleColumns.includes('marketCap') && (
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {token.marketCap ? `$${token.marketCap.toLocaleString()}` : '-'}
+                    </td>
+                  )}
+                  {visibleColumns.includes('volume24h') && (
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {token.volume24h ? `$${token.volume24h.toLocaleString()}` : '-'}
+                    </td>
+                  )}
+                  {visibleColumns.includes('transferVolume24h') && (
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {token.stats?.transferVolume24h
+                        ? `$${token.stats.transferVolume24h.toLocaleString()}`
+                        : '-'}
+                    </td>
+                  )}
+                  {visibleColumns.includes('volatilityScore24h') && (
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {token.stats?.volatilityScore24h
+                        ? token.stats.volatilityScore24h.toFixed(2)
+                        : '-'}
+                    </td>
+                  )}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  });
+
+  export default TokenTable;
+=== .\components\WelcomeScreen.tsx ===
+import React, { useEffect, useState } from 'react';
+import { motion } from 'framer-motion';
+import localforage from 'localforage';
+
+const WelcomeScreen: React.FC<{ onFinish: () => void }> = ({ onFinish }) => {
+  const [show, setShow] = useState(false);
+
+  useEffect(() => {
+    const checkLastVisit = async () => {
+      const lastVisit = await localforage.getItem<number>('lastVisit');
+      const now = Date.now();
+      const oneDay = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+
+      if (!lastVisit || now - lastVisit > oneDay) {
+        setShow(true);
+        await localforage.setItem('lastVisit', now);
+      } else {
+        onFinish();
+      }
+    };
+
+    checkLastVisit();
+  }, [onFinish]);
+
+  if (!show) return null;
+
+  return (
+    <motion.div
+      initial={{ opacity: 1 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 1 }}
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        width: '100vw',
+        height: '100vh',
+        background: '#001529',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        zIndex: 2000,
+      }}
+      onAnimationComplete={() => {
+        setTimeout(() => {
+          setShow(false);
+          onFinish();
+        }, 2000);
+      }}
+    >
+      <motion.div
+        initial={{ scale: 0 }}
+        animate={{ scale: 1 }}
+        transition={{ type: 'spring', stiffness: 260, damping: 20 }}
+      >
+        {/* Replace with your logo */}
+        <div style={{ fontSize: 48, color: '#fff', fontWeight: 'bold' }}>
+          Sunnalytics
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+};
+
+export default WelcomeScreen;
+=== .\hooks\useTokenData.ts ===
+import { useEffect } from 'react';
+import useSWR from 'swr';
+import { useTokenStore } from '../stores/useTokenStore';
+
+interface Token {
+  id: string;
+  name: string;
+  symbol: string;
+  category: string;
+  marketCap?: number;
+  volume24h?: number;
+  price?: number;
+  transferVolume24h?: number;
+  createdAt: string;
+  updatedAt: string;
+  stats?: {
+    priceChange24h: number;
+    volatilityScore24h: number;
+    liquidityScore: number;
+    transferVolume24h: number;
+  };
+}
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000';
+const API_KEY = process.env.NEXT_PUBLIC_API_KEY;
+
+const fetcher = async (url: string) => {
+  const headers: HeadersInit = {};
+  if (API_KEY) {
+    headers['Authorization'] = `Bearer ${API_KEY}`;
+  }
+  const res = await fetch(url, { headers });
+  if (!res.ok) {
+    throw new Error(`Failed to fetch: ${res.statusText}`);
+  }
+  return res.json();
+};
+
+export function useTokenData() {
+  const { setTokens, setFilteredTokens, setLoading, setError, fetchTokens } = useTokenStore();
+
+  const { data, error, isLoading } = useSWR<Token[]>(`${API_BASE_URL}/tokens`, fetcher, {
+    revalidateOnFocus: false,
+    revalidateOnReconnect: false,
+  });
+
+  useEffect(() => {
+    setLoading(isLoading);
+    if (error) {
+      setError(error.message || 'An unknown error occurred');
+    } else if (data) {
+      setTokens(data);
+      setFilteredTokens(data);
+      setError(null);
+    }
+  }, [data, error, isLoading, setTokens, setFilteredTokens, setLoading, setError]);
+
+  return { fetchTokens }; // Expose fetchTokens for manual triggering if needed
+}
+=== .\pages\charts.tsx ===
+
+import React from 'react';
+import { Layout, Typography } from 'antd';
+import BottomNav from '../components/BottomNav';
+
+const { Header, Content } = Layout;
+const { Title } = Typography;
+
+export default function Charts() {
+  return (
+    <Layout style={{ minHeight: '100vh' }}>
+      <Header style={{ background: '#001529', padding: '0 16px' }}>
+        <Title level={3} style={{ color: 'white', margin: '16px 0' }}>
+          Charts
+        </Title>
+      </Header>
+      <Content style={{ padding: '16px', paddingBottom: '60px' }}>
+        <div>Charts Page - Coming Soon</div>
+      </Content>
+      <BottomNav onFilterClick={() => {}} />
+    </Layout>
+  );
+}
+
+=== .\pages\index.tsx ===
+import { useEffect } from 'react';
+import BottomNav from '../components/BottomNav';
+import TokenTable from '../components/TokenTable';
+import { useTokenStore } from '../stores/useTokenStore';
+import { useTokenData } from '../hooks/useTokenData';
+
+export default function Home() {
+  const { loading, error } = useTokenStore();
+  const { fetchTokens } = useTokenData();
+
+  useEffect(() => {
+    fetchTokens();
+  }, [fetchTokens]);
+
+  return (
+    <div className="min-h-screen flex flex-col pb-16">
+      <main className="flex-1 p-4">
+        <h1 className="text-2xl font-bold mb-4">Token Analytics</h1>
+        {loading && <p className="text-center text-gray-500">Loading tokens...</p>}
+        {error && (
+          <p className="text-center text-red-500">
+            Error: {error} <button onClick={fetchTokens} className="text-blue-500 underline">Retry</button>
+          </p>
+        )}
+        {!loading && !error && <TokenTable />}
+      </main>
+      <BottomNav />
+    </div>
+  );
+}
+=== .\pages\settings.tsx ===
+import { useEffect, useState } from 'react';
+import BottomNav from '../components/BottomNav';
+import localforage from 'localforage';
+
+export default function Settings() {
+  const [isMounted, setIsMounted] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+    localforage.getItem('darkMode').then(value => {
+      const darkMode = value as boolean;
+      setIsDarkMode(darkMode || false);
+      if (darkMode) {
+        document.documentElement.classList.add('dark');
+      }
+    });
+  }, []);
+
+  const toggleDarkMode = () => {
+    const newDarkMode = !isDarkMode;
+    setIsDarkMode(newDarkMode);
+    localforage.setItem('darkMode', newDarkMode);
+    if (newDarkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  };
+
+  const handleReset = () => {
+    localforage.clear();
+    setIsDarkMode(false);
+    document.documentElement.classList.remove('dark');
+  };
+
+  if (!isMounted) return null;
+
+  return (
+    <div className="min-h-screen flex flex-col pb-16">
+      <main className="flex-1 p-4">
+        <h1 className="text-2xl font-bold mb-4">Settings</h1>
+        <div className="mb-4 flex items-center justify-between">
+          <span className="text-lg">Dark Mode</span>
+          <label className="relative inline-flex items-center cursor-pointer">
+            <input
+              type="checkbox"
+              checked={isDarkMode}
+              onChange={toggleDarkMode}
+              className="sr-only"
+            />
+            <div
+              className={`w-11 h-6 bg-gray-200 rounded-full peer dark:bg-gray-700 ${
+                isDarkMode ? 'bg-blue-600' : ''
+              }`}
+            >
+              <div
+                className={`absolute w-5 h-5 bg-white rounded-full transition-transform duration-200 ease-in-out ${
+                  isDarkMode ? 'translate-x-5' : 'translate-x-0'
+                }`}
+              ></div>
+            </div>
+          </label>
+        </div>
+        <button
+          onClick={handleReset}
+          className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
+        >
+          Reset All Settings
+        </button>
+      </main>
+      <BottomNav />
+    </div>
+  );
+}
+=== .\pages\welcome.tsx ===
+import { useEffect } from 'react';
+import { useRouter } from 'next/router';
+import localforage from 'localforage';
+
+export default function Welcome() {
+  const router = useRouter();
+
+  useEffect(() => {
+    localforage.getItem('welcomeScreenSeen').then(value => {
+      if (value) {
+        router.push('/');
+      }
+    });
+  }, [router]);
+
+  const handleContinue = () => {
+    localforage.setItem('welcomeScreenSeen', true);
+    router.push('/');
+  };
+
+  return (
+    <div className="min-h-screen flex flex-col justify-center items-center bg-gray-100 p-4">
+      <h1 className="text-3xl font-bold mb-4">Welcome to Sunnalytics</h1>
+      <p className="text-lg text-gray-600 mb-6 text-center">
+        Your go-to platform for token analytics and insights.
+      </p>
+      <button
+        onClick={handleContinue}
+        className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+      >
+        Continue
+      </button>
+    </div>
+  );
+}
+=== .\pages\_app.tsx ===
+import '../styles/globals.css';
+import type { AppProps } from 'next/app';
+import { inter, robotoMono } from '../utils/fonts';
+import Head from 'next/head';
+
+export default function App({ Component, pageProps }: AppProps) {
+  return (
+    <div className={`${inter.variable} ${robotoMono.variable}`}>
+      <Head>
+        <title>Sunnalytics</title>
+        <meta name="description" content="Sunnalytics - Token Analytics Platform" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <link rel="icon" href="/favicon.ico" />
+      </Head>
+      <Component {...pageProps} />
+    </div>
+  );
+}
+=== .\stores\useTokenStore.ts ===
+import { create } from 'zustand';
+import localforage from 'localforage';
+import { persist, createJSONStorage } from 'zustand/middleware';
+
+interface Token {
+  id: string;
+  name: string;
+  symbol: string;
+  category: string;
+  marketCap?: number;
+  volume24h?: number;
+  price?: number;
+  transferVolume24h?: number;
+  createdAt: string;
+  updatedAt: string;
+  stats?: {
+    priceChange24h: number;
+    volatilityScore24h: number;
+    liquidityScore: number;
+    transferVolume24h: number;
+  };
+}
+
+interface TokenState {
+  tokens: Token[];
+  filteredTokens: Token[];
+  loading: boolean;
+  error: string | null;
+  setTokens: (tokens: Token[]) => void;
+  setFilteredTokens: (tokens: Token[]) => void;
+  setLoading: (loading: boolean) => void;
+  setError: (error: string | null) => void;
+  fetchTokens: () => void; // Kept for manual triggering if needed
+}
+
+export const useTokenStore = create<TokenState>()(
+  persist(
+    (set) => ({
+      tokens: [],
+      filteredTokens: [],
+      loading: false,
+      error: null,
+      setTokens: (tokens: Token[]) => set({ tokens }),
+      setFilteredTokens: (tokens: Token[]) => set({ filteredTokens: tokens }),
+      setLoading: (loading: boolean) => set({ loading }),
+      setError: (error: string | null) => set({ error }),
+      fetchTokens: () => {}, // Placeholder, will be triggered by useTokenData
+    }),
+    {
+      name: 'token-store',
+      storage: createJSONStorage(() => localforage),
+    }
+  )
+);
+=== .\styles\globals.css ===
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --max-width: 1100px;
+  --border-radius: 12px;
+  --font-mono: var(--font-roboto-mono), ui-monospace, Menlo, Monaco, 'Cascadia Mono', 'Segoe UI Mono',
+    'Roboto Mono', 'Oxygen Mono', 'Ubuntu Monospace', 'Source Code Pro',
+    'Fira Mono', 'Droid Sans Mono', 'Courier New', monospace;
+}
+
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+
+html,
+body {
+  max-width: 100vw;
+  overflow-x: hidden;
+  font-family: var(--font-inter), system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 
+    'Helvetica Neue', Arial, sans-serif;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+@media (prefers-color-scheme: dark) {
+  html {
+    color-scheme: dark;
+  }
+}
+=== .\utils\api.ts ===
+import useSWR from 'swr';
+
+const API_BASE_URL = 'http://localhost:3001';
+
+const fetcher = async (url: string) => {
+  const res = await fetch(url);
+  if (!res.ok) {
+    const error = new Error('An error occurred while fetching the data.');
+    throw error;
+  }
+  return res.json();
+};
+
+export function useTokens(category?: string) {
+  const url = category
+    ? `${API_BASE_URL}/tokens?category=${category}`
+    : `${API_BASE_URL}/tokens`;
+  const { data, error, isLoading } = useSWR(url, fetcher, {
+    refreshInterval: 60000, // Refresh every minute
+    revalidateOnFocus: false,
+  });
+  return { tokens: data, error, isLoading };
+}
+
+export async function refreshTokens() {
+  const res = await fetch(`${API_BASE_URL}/tokens/refresh`, { method: 'POST' });
+  if (!res.ok) {
+    throw new Error('Failed to refresh tokens');
+  }
+  return res.json();
+}
+
+=== .\utils\fonts.ts ===
+import { Inter, Roboto_Mono } from 'next/font/google';
+
+export const inter = Inter({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-inter',
+});
+
+export const robotoMono = Roboto_Mono({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-roboto-mono',
+});
+=== .\utils\tokenStats.ts ===
+export interface TokenStats {
+  priceChange24h: number;
+  volatilityScore24h: number;
+  liquidityScore: number;
+  transferVolume24h: number;
+}
+
+export function calculateTokenStats(data: {
+  price: number | null;
+  marketCap: number | null;
+  volume24h: number | null;
+  circulatingSupply: number | null;
+  totalSupply: number | null;
+  priceChange24h?: number | null;
+  transferAmount?: number;
+}): TokenStats {
+  const { price, marketCap, volume24h, circulatingSupply, priceChange24h, transferAmount } = data;
+
+  const change24h = priceChange24h ?? 0;
+  const volatility = volume24h && marketCap ? (volume24h / marketCap) : 0;
+  const liquidityScore = volume24h && circulatingSupply ? volume24h / circulatingSupply : 0;
+  const transferVol24h = transferAmount ?? 0;
+
+  return {
+    priceChange24h: Number(change24h.toFixed(2)),
+    volatilityScore24h: Number(volatility.toFixed(2)),
+    liquidityScore: Number(liquidityScore.toFixed(2)),
+    transferVolume24h: Number(transferVol24h.toFixed(2)),
+  };
+}
