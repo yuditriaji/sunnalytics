@@ -22,8 +22,14 @@ interface Token {
   potentialMultiplier?: number;
 }
 
-const TokenTable: React.FC = memo(() => {
-  const { filteredTokens, setFilteredTokens, tokens } = useTokenStore();
+interface TokenTableProps {
+  isFilterDrawerOpen: boolean;
+  onFilterClick: () => void;
+  onFilterClose: () => void;
+}
+
+const TokenTable: React.FC<TokenTableProps> = memo(({ isFilterDrawerOpen, onFilterClick, onFilterClose }) => {
+  const { filteredTokens } = useTokenStore();
   const [visibleColumns, setVisibleColumns] = useState<string[]>([
     'name',
     'symbol',
@@ -36,7 +42,6 @@ const TokenTable: React.FC = memo(() => {
     'circulatingSupplyPercentage',
   ]);
   const [isColumnModalVisible, setIsColumnModalVisible] = useState(false);
-  const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
 
   const toggleColumn = (key: string) => {
     setVisibleColumns(prev =>
@@ -50,14 +55,6 @@ const TokenTable: React.FC = memo(() => {
 
   const handleColumnClose = () => {
     setIsColumnModalVisible(false);
-  };
-
-  const showFilterDrawer = () => {
-    setIsFilterDrawerOpen(true);
-  };
-
-  const handleFilterClose = () => {
-    setIsFilterDrawerOpen(false);
   };
 
   const columns = [
@@ -100,7 +97,7 @@ const TokenTable: React.FC = memo(() => {
             Add/Remove Columns
           </button>
           <button
-            onClick={showFilterDrawer}
+            onClick={onFilterClick}
             className="px-4 py-2 bg-yellow-500 text-black rounded hover:bg-yellow-400 transition-colors"
           >
             Filter
@@ -212,7 +209,7 @@ const TokenTable: React.FC = memo(() => {
           </div>
         </div>
       )}
-      <FilterDrawer isOpen={isFilterDrawerOpen} onClose={handleFilterClose} />
+      <FilterDrawer isOpen={isFilterDrawerOpen} onClose={onFilterClose} />
     </div>
   );
 });
