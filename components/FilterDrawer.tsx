@@ -1,80 +1,111 @@
-import React from 'react';
-import { Drawer, Form, Input, Select, Button, Slider, Space } from 'antd';
+import React, { useState, useEffect } from 'react';
 import { useTokenStore } from '../stores/useTokenStore';
 
 interface FilterDrawerProps {
-  visible: boolean;
+  isOpen: boolean;
   onClose: () => void;
 }
 
-const FilterDrawer: React.FC<FilterDrawerProps> = ({ visible, onClose }) => {
-  const [form] = Form.useForm();
-  const { setFilters } = useTokenStore();
+const FilterDrawer: React.FC<FilterDrawerProps> = ({ isOpen, onClose }) => {
+  const { filteredTokens, setFilteredTokens, tokens } = useTokenStore();
+  const [filters, setFilters] = useState({
+    category: '',
+    minPrice: '',
+    maxPrice: '',
+  });
 
-  const handleApply = () => {
-    const values = form.getFieldsValue();
-    setFilters({
-      category: values.category,
-      priceRange: values.priceRange,
-      marketCapRange: values.marketCapRange,
-      search: values.search,
-    });
-    onClose();
+  useEffect(() => {
+    const applyFilters = () => {
+      let filtered = [...tokens];
+      if (filters.category) {
+        filtered = filtered.filter(token => token.category === filters.category);
+      }
+      if (filters.minPrice) {
+        const min = parseFloat(filters.minPrice);
+        filtered = filtered.filter(token => token.price !== undefined && token.price >= min);
+      }
+      if (filters.maxPrice) {
+        const max = parseFloat(filters.maxPrice);
+        filtered = filtered.filter(token => token.price !== undefined && token.price <= max);
+      }
+      setFilteredTokens(filtered);
+    };
+
+    applyFilters();
+  }, [filters, tokens, setFilteredTokens]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFilters(prev => ({ ...prev, [name]: value }));
   };
 
+  const handleReset = () => {
+    setFilters({ category: '', minPrice: '', maxPrice: '' });
+    setFilteredTokens(tokens);
+  };
+
+  if (!isOpen) return null;
+
   return (
-    <Drawer
-      title="Filter Tokens"
-      placement="bottom"
-      onClose={onClose}
-      open={visible}
-      height={400}
-      extra={
-        <Space>
-          <Button
-            onClick={() => {
-              form.resetFields();
-              setFilters({});
-            }}
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end justify-center z-50">
+      <div className="bg-gray-800 w-full max-w-md p-4 rounded-t-lg">
+        <h2 className="text-lg font-bold text-white mb-4">Filter Tokens</h2>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-300">Category</label>
+            <select
+              name="category"
+              value={filters.category}
+              onChange={handleChange}
+              className="mt-1 block w-full p-2 bg-gray-700 border border-gray-600 rounded text-white"
+            >
+              <option value="">All</option>
+              <option value="altcoin">Altcoin</option>
+              <option value="defi">DeFi</option>
+              <option value="memecoin">Memecoin</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-300">Min Price ($)</label>
+            <input
+              type="number"
+              name="minPrice"
+              value={filters.minPrice}
+              onChange={handleChange}
+              className="mt-1 block w-full p-2 bg-gray-700 border border-gray-600 rounded text-white"
+              placeholder="0.00"
+              min="0"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-300">Max Price ($)</label>
+            <input
+              type="number"
+              name="maxPrice"
+              value={filters.maxPrice}
+              onChange={handleChange}
+              className="mt-1 block w-full p-2 bg-gray-700 border border-gray-600 rounded text-white"
+              placeholder="0.00"
+              min="0"
+            />
+          </div>
+        </div>
+        <div className="mt-6 flex justify-end space-x-4">
+          <button
+            onClick={handleReset}
+            className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-500 transition-colors"
           >
             Reset
-          </Button>
-          <Button type="primary" onClick={handleApply}>
+          </button>
+          <button
+            onClick={onClose}
+            className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-400 transition-colors"
+          >
             Apply
-          </Button>
-        </Space>
-      }
-    >
-      <Form form={form} layout="vertical">
-        <Form.Item name="category" label="Category">
-          <Select
-            mode="multiple"
-            placeholder="Select categories"
-            options={[
-              { label: 'Memecoin', value: 'memecoin' },
-              { label: 'DeFi', value: 'defi' },
-              { label: 'Altcoin', value: 'altcoin' },
-              { label: 'Bitcoin', value: 'bitcoin' },
-            ]}
-          />
-        </Form.Item>
-        <Form.Item name="priceRange" label="Price Range (USD)">
-          <Slider range min={0} max={150000} step={1000} defaultValue={[0, 150000]} />
-        </Form.Item>
-        <Form.Item name="marketCapRange" label="Market Cap Range (USD)">
-          <Slider
-            range
-            min={0}
-            max={3000000000000}
-            step={100000000}
-            defaultValue={[0, 3000000000000]}
-          />
-        </Form.Item>
-        <Form.Item name="search" label="Search">
-          <Input placeholder="Search by name or symbol" />
-        </Form.Item>
-      </Form>
-    </Drawer>
+          </button>
+        </div>
+      </div>
+    </div>
   );
 };
 
