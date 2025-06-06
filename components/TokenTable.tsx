@@ -3,7 +3,6 @@ import { useTokenStore } from '../stores/useTokenStore';
 import FilterDrawer from './FilterDrawer';
 
 interface Token {
-  id: string;
   name: string;
   symbol: string;
   category: string;
@@ -11,9 +10,6 @@ interface Token {
   marketCap?: number;
   volume24h?: number;
   transferVolume24h?: number;
-  createdAt: string;
-  updatedAt: string;
-  volatilityScore24h?: number;
   fullyDilutedValuation?: number;
   volumeMarketCapRatio?: number;
   circulatingSupplyPercentage?: number;
@@ -33,13 +29,17 @@ const TokenTable: React.FC<TokenTableProps> = memo(({ isFilterDrawerOpen, onFilt
   const [visibleColumns, setVisibleColumns] = useState<string[]>([
     'name',
     'symbol',
+    'category',
     'price',
     'marketCap',
     'volume24h',
     'transferVolume24h',
-    'volatilityScore24h',
+    'fullyDilutedValuation',
     'volumeMarketCapRatio',
     'circulatingSupplyPercentage',
+    'isVolumeHealthy',
+    'isCirculatingSupplyGood',
+    'potentialMultiplier',
   ]);
   const [isColumnModalVisible, setIsColumnModalVisible] = useState(false);
 
@@ -60,20 +60,36 @@ const TokenTable: React.FC<TokenTableProps> = memo(({ isFilterDrawerOpen, onFilt
   const columns = [
     'name',
     'symbol',
+    'category',
     'price',
     'marketCap',
     'volume24h',
     'transferVolume24h',
-    'volatilityScore24h',
+    'fullyDilutedValuation',
     'volumeMarketCapRatio',
     'circulatingSupplyPercentage',
+    'isVolumeHealthy',
+    'isCirculatingSupplyGood',
+    'potentialMultiplier',
   ].filter(col => visibleColumns.includes(col));
 
+  // Formatting functions
   const formatNumber = (value: number | undefined, suffix: string = '') => {
-    if (value === undefined) return '-';
+    if (value === undefined || value === 0) return '-';
     if (value >= 1e9) return `$${Math.floor(value / 1e9)}${suffix}B`;
     if (value >= 1e6) return `$${Math.floor(value / 1e6)}${suffix}M`;
     return `$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 6 })}`;
+  };
+
+  const formatDate = (date: string) => {
+    return new Date(date).toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZone: 'Asia/Jakarta',
+    });
   };
 
   const formatRatio = (value: number | undefined) => value !== undefined ? `${(value * 100).toFixed(2)}%` : '-';
@@ -120,7 +136,7 @@ const TokenTable: React.FC<TokenTableProps> = memo(({ isFilterDrawerOpen, onFilt
           </thead>
           <tbody className="bg-gray-800 divide-y divide-gray-600">
             {filteredTokens.map((token: Token) => (
-              <tr key={token.id}>
+              <tr key={token.name}> {/* Changed from token.id to token.name as a unique key */}
                 {visibleColumns.includes('name') && (
                   <td className="px-6 py-4 whitespace-nowrap text-white">
                     {token.name}
@@ -129,6 +145,11 @@ const TokenTable: React.FC<TokenTableProps> = memo(({ isFilterDrawerOpen, onFilt
                 {visibleColumns.includes('symbol') && (
                   <td className="px-6 py-4 whitespace-nowrap text-white">
                     {token.symbol.toUpperCase()}
+                  </td>
+                )}
+                {visibleColumns.includes('category') && (
+                  <td className="px-6 py-4 whitespace-nowrap text-white">
+                    {token.category}
                   </td>
                 )}
                 {visibleColumns.includes('price') && (
@@ -153,9 +174,9 @@ const TokenTable: React.FC<TokenTableProps> = memo(({ isFilterDrawerOpen, onFilt
                       : '-'}
                   </td>
                 )}
-                {visibleColumns.includes('volatilityScore24h') && (
+                {visibleColumns.includes('fullyDilutedValuation') && (
                   <td className="px-6 py-4 whitespace-nowrap text-white">
-                    {token.volatilityScore24h !== undefined ? token.volatilityScore24h.toFixed(2) : '-'}
+                    {formatNumber(token.fullyDilutedValuation, '')}
                   </td>
                 )}
                 {visibleColumns.includes('volumeMarketCapRatio') && (
@@ -166,6 +187,21 @@ const TokenTable: React.FC<TokenTableProps> = memo(({ isFilterDrawerOpen, onFilt
                 {visibleColumns.includes('circulatingSupplyPercentage') && (
                   <td className="px-6 py-4 whitespace-nowrap text-white">
                     {formatPercentage(token.circulatingSupplyPercentage)}
+                  </td>
+                )}
+                {visibleColumns.includes('isVolumeHealthy') && (
+                  <td className="px-6 py-4 whitespace-nowrap text-white">
+                    {formatBoolean(token.isVolumeHealthy)}
+                  </td>
+                )}
+                {visibleColumns.includes('isCirculatingSupplyGood') && (
+                  <td className="px-6 py-4 whitespace-nowrap text-white">
+                    {formatBoolean(token.isCirculatingSupplyGood)}
+                  </td>
+                )}
+                {visibleColumns.includes('potentialMultiplier') && (
+                  <td className="px-6 py-4 whitespace-nowrap text-white">
+                    {formatMultiplier(token.potentialMultiplier)}
                   </td>
                 )}
               </tr>
@@ -180,13 +216,17 @@ const TokenTable: React.FC<TokenTableProps> = memo(({ isFilterDrawerOpen, onFilt
             {[
               'name',
               'symbol',
+              'category',
               'price',
               'marketCap',
               'volume24h',
               'transferVolume24h',
-              'volatilityScore24h',
+              'fullyDilutedValuation',
               'volumeMarketCapRatio',
               'circulatingSupplyPercentage',
+              'isVolumeHealthy',
+              'isCirculatingSupplyGood',
+              'potentialMultiplier',
             ].map(key => (
               <div key={key} className="flex items-center mb-2">
                 <input

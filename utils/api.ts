@@ -1,6 +1,6 @@
 import useSWR from 'swr';
 
-const API_BASE_URL = 'http://localhost:3001';
+const API_BASE_URL = 'https://sunnalytics-backend.onrender.com';
 
 const fetcher = async (url: string) => {
   const res = await fetch(url);

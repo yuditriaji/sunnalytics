@@ -12,6 +12,12 @@ const FilterDrawer: React.FC<FilterDrawerProps> = ({ isOpen, onClose }) => {
     category: '',
     minPrice: '',
     maxPrice: '',
+    minVolumeMarketCapRatio: '',
+    maxVolumeMarketCapRatio: '',
+    minCirculatingSupplyPercentage: '',
+    maxCirculatingSupplyPercentage: '',
+    isVolumeHealthy: '',
+    isCirculatingSupplyGood: '',
   });
 
   useEffect(() => {
@@ -28,6 +34,32 @@ const FilterDrawer: React.FC<FilterDrawerProps> = ({ isOpen, onClose }) => {
         const max = parseFloat(filters.maxPrice);
         filtered = filtered.filter(token => token.price !== undefined && token.price <= max);
       }
+      if (filters.minVolumeMarketCapRatio) {
+        const min = parseFloat(filters.minVolumeMarketCapRatio) / 100; // Convert percentage to ratio
+        filtered = filtered.filter(token => token.volumeMarketCapRatio !== undefined && token.volumeMarketCapRatio >= min);
+      }
+      if (filters.maxVolumeMarketCapRatio) {
+        const max = parseFloat(filters.maxVolumeMarketCapRatio) / 100; // Convert percentage to ratio
+        filtered = filtered.filter(token => token.volumeMarketCapRatio !== undefined && token.volumeMarketCapRatio <= max);
+      }
+      if (filters.minCirculatingSupplyPercentage) {
+        const min = parseFloat(filters.minCirculatingSupplyPercentage);
+        filtered = filtered.filter(token => token.circulatingSupplyPercentage !== undefined && token.circulatingSupplyPercentage >= min);
+      }
+      if (filters.maxCirculatingSupplyPercentage) {
+        const max = parseFloat(filters.maxCirculatingSupplyPercentage);
+        filtered = filtered.filter(token => token.circulatingSupplyPercentage !== undefined && token.circulatingSupplyPercentage <= max);
+      }
+      if (filters.isVolumeHealthy === 'true') {
+        filtered = filtered.filter(token => token.isVolumeHealthy === true);
+      } else if (filters.isVolumeHealthy === 'false') {
+        filtered = filtered.filter(token => token.isVolumeHealthy === false);
+      }
+      if (filters.isCirculatingSupplyGood === 'true') {
+        filtered = filtered.filter(token => token.isCirculatingSupplyGood === true);
+      } else if (filters.isCirculatingSupplyGood === 'false') {
+        filtered = filtered.filter(token => token.isCirculatingSupplyGood === false);
+      }
       setFilteredTokens(filtered);
     };
 
@@ -40,7 +72,17 @@ const FilterDrawer: React.FC<FilterDrawerProps> = ({ isOpen, onClose }) => {
   };
 
   const handleReset = () => {
-    setFilters({ category: '', minPrice: '', maxPrice: '' });
+    setFilters({
+      category: '',
+      minPrice: '',
+      maxPrice: '',
+      minVolumeMarketCapRatio: '',
+      maxVolumeMarketCapRatio: '',
+      minCirculatingSupplyPercentage: '',
+      maxCirculatingSupplyPercentage: '',
+      isVolumeHealthy: '',
+      isCirculatingSupplyGood: '',
+    });
     setFilteredTokens(tokens);
   };
 
@@ -88,6 +130,84 @@ const FilterDrawer: React.FC<FilterDrawerProps> = ({ isOpen, onClose }) => {
               placeholder="0.00"
               min="0"
             />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-300">Min Volume Market Cap Ratio (%)</label>
+            <input
+              type="number"
+              name="minVolumeMarketCapRatio"
+              value={filters.minVolumeMarketCapRatio}
+              onChange={handleChange}
+              className="mt-1 block w-full p-2 bg-gray-700 border border-gray-600 rounded text-white"
+              placeholder="0.00"
+              min="0"
+              step="0.01"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-300">Max Volume Market Cap Ratio (%)</label>
+            <input
+              type="number"
+              name="maxVolumeMarketCapRatio"
+              value={filters.maxVolumeMarketCapRatio}
+              onChange={handleChange}
+              className="mt-1 block w-full p-2 bg-gray-700 border border-gray-600 rounded text-white"
+              placeholder="100.00"
+              min="0"
+              step="0.01"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-300">Min Circulating Supply (%)</label>
+            <input
+              type="number"
+              name="minCirculatingSupplyPercentage"
+              value={filters.minCirculatingSupplyPercentage}
+              onChange={handleChange}
+              className="mt-1 block w-full p-2 bg-gray-700 border border-gray-600 rounded text-white"
+              placeholder="0.00"
+              min="0"
+              step="0.01"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-300">Max Circulating Supply (%)</label>
+            <input
+              type="number"
+              name="maxCirculatingSupplyPercentage"
+              value={filters.maxCirculatingSupplyPercentage}
+              onChange={handleChange}
+              className="mt-1 block w-full p-2 bg-gray-700 border border-gray-600 rounded text-white"
+              placeholder="100.00"
+              min="0"
+              step="0.01"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-300">Is Volume Healthy</label>
+            <select
+              name="isVolumeHealthy"
+              value={filters.isVolumeHealthy}
+              onChange={handleChange}
+              className="mt-1 block w-full p-2 bg-gray-700 border border-gray-600 rounded text-white"
+            >
+              <option value="">All</option>
+              <option value="true">Yes</option>
+              <option value="false">No</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-300">Is Circulating Supply Good</label>
+            <select
+              name="isCirculatingSupplyGood"
+              value={filters.isCirculatingSupplyGood}
+              onChange={handleChange}
+              className="mt-1 block w-full p-2 bg-gray-700 border border-gray-600 rounded text-white"
+            >
+              <option value="">All</option>
+              <option value="true">Yes</option>
+              <option value="false">No</option>
+            </select>
           </div>
         </div>
         <div className="mt-6 flex justify-end space-x-4">

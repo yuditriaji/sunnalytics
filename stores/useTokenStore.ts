@@ -3,7 +3,6 @@ import localforage from 'localforage';
 import { persist, createJSONStorage } from 'zustand/middleware';
 
 interface Token {
-  id: string;
   name: string;
   symbol: string;
   category: string;
@@ -11,13 +10,16 @@ interface Token {
   volume24h?: number;
   price?: number;
   transferVolume24h?: number;
-  createdAt: string;
-  updatedAt: string;
+  fullyDilutedValuation?: number;
+  volumeMarketCapRatio?: number;
+  circulatingSupplyPercentage?: number;
+  isVolumeHealthy?: boolean;
+  isCirculatingSupplyGood?: boolean;
+  potentialMultiplier?: number;
   stats?: {
-    priceChange24h: number;
-    volatilityScore24h: number;
-    liquidityScore: number;
-    transferVolume24h: number;
+    priceChange24h?: number;
+    volatilityScore24h?: number;
+    liquidityScore?: number;
   };
 }
 
