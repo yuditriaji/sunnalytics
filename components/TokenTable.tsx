@@ -26,19 +26,28 @@ interface TokenTableProps {
 
 const TokenTable: React.FC<TokenTableProps> = memo(({ isFilterDrawerOpen, onFilterClick, onFilterClose }) => {
   const { filteredTokens } = useTokenStore();
+  const MAX_COLUMNS = 4; // Maximum number of visible columns for compact view
   const [visibleColumns, setVisibleColumns] = useState<string[]>([
     'name',
     'price',
     'marketCap',
-    'volumeMarketCapRatio', // Default mobile columns
+    'volumeMarketCapRatio', // Default to a compact set like the screenshot
   ]);
   const [isColumnModalVisible, setIsColumnModalVisible] = useState(false);
-  const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
 
   const toggleColumn = (key: string) => {
-    setVisibleColumns(prev =>
-      prev.includes(key) ? prev.filter(col => col !== key) : [...prev, key]
-    );
+    setVisibleColumns(prev => {
+      const isCurrentlyVisible = prev.includes(key);
+      const newVisibleColumns = isCurrentlyVisible
+        ? prev.filter(col => col !== key)
+        : [...prev.filter(col => col !== key), key];
+
+      // Enforce MAX_COLUMNS limit
+      if (newVisibleColumns.length > MAX_COLUMNS) {
+        return prev; // Do not add if it exceeds the limit
+      }
+      return newVisibleColumns;
+    });
   };
 
   const showColumnModal = () => {
@@ -48,29 +57,6 @@ const TokenTable: React.FC<TokenTableProps> = memo(({ isFilterDrawerOpen, onFilt
   const handleColumnClose = () => {
     setIsColumnModalVisible(false);
   };
-
-  const handleSort = (key: string) => {
-    setSortConfig(prev => {
-      if (prev?.key === key && prev.direction === 'asc') {
-        return { key, direction: 'desc' };
-      }
-      return { key, direction: 'asc' };
-    });
-  };
-
-  const sortedTokens = React.useMemo(() => {
-    if (!sortConfig) return filteredTokens;
-    return [...filteredTokens].sort((a, b) => {
-      let aValue = a[sortConfig.key as keyof Token] as number | string;
-      let bValue = b[sortConfig.key as keyof Token] as number | string;
-      if (typeof aValue === 'number' && typeof bValue === 'number') {
-        return sortConfig.direction === 'asc' ? aValue - bValue : bValue - aValue;
-      }
-      return sortConfig.direction === 'asc'
-        ? (aValue as string).localeCompare(bValue as string)
-        : (bValue as string).localeCompare(aValue as string);
-    });
-  }, [filteredTokens, sortConfig]);
 
   const columns = [
     'name',
@@ -88,6 +74,7 @@ const TokenTable: React.FC<TokenTableProps> = memo(({ isFilterDrawerOpen, onFilt
     'potentialMultiplier',
   ].filter(col => visibleColumns.includes(col));
 
+  // Formatting functions
   const formatNumber = (value: number | undefined, suffix: string = '') => {
     if (value === undefined || value === 0) return '-';
     if (value >= 1e9) return `$${Math.floor(value / 1e9)}${suffix}B`;
@@ -101,23 +88,23 @@ const TokenTable: React.FC<TokenTableProps> = memo(({ isFilterDrawerOpen, onFilt
   const formatMultiplier = (value: number | undefined) => value !== undefined ? value.toFixed(2) : '-';
 
   return (
-    <div className="p-4">
-      <div className="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between">
+    <div className="p-2 sm:p-4">
+      <div className="mb-2 sm:mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between">
         <input
           type="text"
           placeholder="Search tokens..."
-          className="w-full sm:max-w-xs p-2 border border-gray-300 rounded bg-gray-800 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 mb-2 sm:mb-0"
+          className="w-full sm:max-w-xs p-1 sm:p-2 border border-gray-300 rounded bg-gray-800 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
         />
-        <div className="flex space-x-2">
+        <div className="mt-1 sm:mt-0 sm:ml-2 flex space-x-1 sm:space-x-2">
           <button
             onClick={showColumnModal}
-            className="px-3 py-1 bg-gray-700 text-white rounded text-sm hover:bg-gray-600 transition-colors"
+            className="px-2 sm:px-4 py-1 sm:py-2 bg-gray-700 text-white rounded hover:bg-gray-600 transition-colors text-xs sm:text-sm"
           >
             Add/Remove Columns
           </button>
           <button
             onClick={onFilterClick}
-            className="px-3 py-1 bg-yellow-500 text-black rounded text-sm hover:bg-yellow-400 transition-colors"
+            className="px-2 sm:px-4 py-1 sm:py-2 bg-yellow-500 text-black rounded hover:bg-yellow-400 transition-colors text-xs sm:text-sm"
           >
             Filter
           </button>
@@ -130,62 +117,82 @@ const TokenTable: React.FC<TokenTableProps> = memo(({ isFilterDrawerOpen, onFilt
               {columns.map(col => (
                 <th
                   key={col}
-                  onClick={() => handleSort(col)}
-                  className="px-4 py-2 text-left text-xs font-medium text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-600"
+                  className="px-2 sm:px-4 py-1 sm:py-2 text-left text-xs sm:text-sm font-medium text-gray-300 uppercase tracking-wider"
                 >
-                  <div className="flex items-center">
-                    {col.charAt(0).toUpperCase() + col.slice(1).replace(/([A-Z])/g, ' $1')}
-                    {sortConfig?.key === col && (
-                      <span className="ml-1">{sortConfig.direction === 'asc' ? '△' : '▽'}</span>
-                    )}
-                  </div>
+                  {col.charAt(0).toUpperCase() + col.slice(1).replace(/([A-Z])/g, ' $1')}
                 </th>
               ))}
             </tr>
           </thead>
           <tbody className="bg-gray-800 divide-y divide-gray-600">
-            {sortedTokens.map((token: Token) => (
-              <tr key={token.name} className="hover:bg-gray-700 transition-colors">
+            {filteredTokens.map((token: Token) => (
+              <tr key={token.name}>
                 {visibleColumns.includes('name') && (
-                  <td className="px-4 py-2 whitespace-nowrap text-white">{token.name}</td>
+                  <td className="px-2 sm:px-4 py-1 sm:py-2 whitespace-nowrap text-white text-xs sm:text-sm">
+                    {token.name}
+                  </td>
                 )}
                 {visibleColumns.includes('symbol') && (
-                  <td className="px-4 py-2 whitespace-nowrap text-white">{token.symbol.toUpperCase()}</td>
+                  <td className="px-2 sm:px-4 py-1 sm:py-2 whitespace-nowrap text-white text-xs sm:text-sm">
+                    {token.symbol.toUpperCase()}
+                  </td>
                 )}
                 {visibleColumns.includes('category') && (
-                  <td className="px-4 py-2 whitespace-nowrap text-white">{token.category}</td>
+                  <td className="px-2 sm:px-4 py-1 sm:py-2 whitespace-nowrap text-white text-xs sm:text-sm">
+                    {token.category}
+                  </td>
                 )}
                 {visibleColumns.includes('price') && (
-                  <td className="px-4 py-2 whitespace-nowrap text-white">{formatNumber(token.price)}</td>
+                  <td className="px-2 sm:px-4 py-1 sm:py-2 whitespace-nowrap text-white text-xs sm:text-sm">
+                    {formatNumber(token.price)}
+                  </td>
                 )}
                 {visibleColumns.includes('marketCap') && (
-                  <td className="px-4 py-2 whitespace-nowrap text-white">{formatNumber(token.marketCap, '')}</td>
+                  <td className="px-2 sm:px-4 py-1 sm:py-2 whitespace-nowrap text-white text-xs sm:text-sm">
+                    {formatNumber(token.marketCap, '')}
+                  </td>
                 )}
                 {visibleColumns.includes('volume24h') && (
-                  <td className="px-4 py-2 whitespace-nowrap text-white">{formatNumber(token.volume24h, '')}</td>
+                  <td className="px-2 sm:px-4 py-1 sm:py-2 whitespace-nowrap text-white text-xs sm:text-sm">
+                    {formatNumber(token.volume24h, '')}
+                  </td>
                 )}
                 {visibleColumns.includes('transferVolume24h') && (
-                  <td className="px-4 py-2 whitespace-nowrap text-white">
-                    {token.transferVolume24h ? `$${token.transferVolume24h.toLocaleString()}` : '-'}
+                  <td className="px-2 sm:px-4 py-1 sm:py-2 whitespace-nowrap text-white text-xs sm:text-sm">
+                    {token.transferVolume24h
+                      ? `$${token.transferVolume24h.toLocaleString()}`
+                      : '-'}
                   </td>
                 )}
                 {visibleColumns.includes('fullyDilutedValuation') && (
-                  <td className="px-4 py-2 whitespace-nowrap text-white">{formatNumber(token.fullyDilutedValuation, '')}</td>
+                  <td className="px-2 sm:px-4 py-1 sm:py-2 whitespace-nowrap text-white text-xs sm:text-sm">
+                    {formatNumber(token.fullyDilutedValuation, '')}
+                  </td>
                 )}
                 {visibleColumns.includes('volumeMarketCapRatio') && (
-                  <td className="px-4 py-2 whitespace-nowrap text-white">{formatRatio(token.volumeMarketCapRatio)}</td>
+                  <td className="px-2 sm:px-4 py-1 sm:py-2 whitespace-nowrap text-white text-xs sm:text-sm">
+                    {formatRatio(token.volumeMarketCapRatio)}
+                  </td>
                 )}
                 {visibleColumns.includes('circulatingSupplyPercentage') && (
-                  <td className="px-4 py-2 whitespace-nowrap text-white">{formatPercentage(token.circulatingSupplyPercentage)}</td>
+                  <td className="px-2 sm:px-4 py-1 sm:py-2 whitespace-nowrap text-white text-xs sm:text-sm">
+                    {formatPercentage(token.circulatingSupplyPercentage)}
+                  </td>
                 )}
                 {visibleColumns.includes('isVolumeHealthy') && (
-                  <td className="px-4 py-2 whitespace-nowrap text-white">{formatBoolean(token.isVolumeHealthy)}</td>
+                  <td className="px-2 sm:px-4 py-1 sm:py-2 whitespace-nowrap text-white text-xs sm:text-sm">
+                    {formatBoolean(token.isVolumeHealthy)}
+                  </td>
                 )}
                 {visibleColumns.includes('isCirculatingSupplyGood') && (
-                  <td className="px-4 py-2 whitespace-nowrap text-white">{formatBoolean(token.isCirculatingSupplyGood)}</td>
+                  <td className="px-2 sm:px-4 py-1 sm:py-2 whitespace-nowrap text-white text-xs sm:text-sm">
+                    {formatBoolean(token.isCirculatingSupplyGood)}
+                  </td>
                 )}
                 {visibleColumns.includes('potentialMultiplier') && (
-                  <td className="px-4 py-2 whitespace-nowrap text-white">{formatMultiplier(token.potentialMultiplier)}</td>
+                  <td className="px-2 sm:px-4 py-1 sm:py-2 whitespace-nowrap text-white text-xs sm:text-sm">
+                    {formatMultiplier(token.potentialMultiplier)}
+                  </td>
                 )}
               </tr>
             ))}
@@ -218,7 +225,7 @@ const TokenTable: React.FC<TokenTableProps> = memo(({ isFilterDrawerOpen, onFilt
                   onChange={() => toggleColumn(key)}
                   className="mr-2 h-4 w-4 text-green-500 bg-gray-700 border-gray-600 rounded focus:ring-green-500"
                 />
-                <span className="text-white">
+                <span className="text-white text-sm">
                   {key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1')}
                 </span>
               </div>
