@@ -7,15 +7,42 @@ import WelcomeScreen from '../components/WelcomeScreen';
 
 export default function App({ Component, pageProps }: AppProps) {
   const [showWelcome, setShowWelcome] = useState(true);
+  const INACTIVITY_THRESHOLD = 10 * 60 * 1000; // 10 minutes in milliseconds
 
   useEffect(() => {
-    // Ensure the welcome screen only shows on initial load
-    const hasShownWelcome = localStorage.getItem('hasShownWelcome');
-    if (!hasShownWelcome) {
-      localStorage.setItem('hasShownWelcome', 'true');
+    const lastActive = localStorage.getItem('lastActive');
+    const now = new Date().getTime();
+
+    if (lastActive) {
+      const lastActiveTime = parseInt(lastActive, 10);
+      const timeSinceLastActive = now - lastActiveTime;
+
+      // Show welcome screen if inactive for more than INACTIVITY_THRESHOLD
+      if (timeSinceLastActive > INACTIVITY_THRESHOLD) {
+        setShowWelcome(true);
+      } else {
+        setShowWelcome(false);
+      }
     } else {
-      setShowWelcome(false);
+      // First visit or no stored timestamp
+      localStorage.setItem('lastActive', now.toString());
+      setShowWelcome(true);
     }
+
+    // Update last active timestamp when the app is interacted with
+    const handleActivity = () => {
+      localStorage.setItem('lastActive', now.toString());
+    };
+
+    window.addEventListener('mousemove', handleActivity);
+    window.addEventListener('keydown', handleActivity);
+    window.addEventListener('scroll', handleActivity);
+
+    return () => {
+      window.removeEventListener('mousemove', handleActivity);
+      window.removeEventListener('keydown', handleActivity);
+      window.removeEventListener('scroll', handleActivity);
+    };
   }, []);
 
   const handleWelcomeFinish = () => {
