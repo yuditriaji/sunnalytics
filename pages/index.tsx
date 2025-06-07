@@ -1,10 +1,17 @@
-import { useState } from 'react';
-import TokenTable from '../components/TokenTable';
+import { useEffect, useState } from 'react';
 import BottomNav from '../components/BottomNav';
-import FilterDrawer from '../components/FilterDrawer';
+import TokenTable from '../components/TokenTable';
+import { useTokenStore } from '../stores/useTokenStore';
+import { useTokenData } from '../hooks/useTokenData';
 
 export default function Home() {
+  const { loading, error } = useTokenStore();
+  const { fetchTokens } = useTokenData();
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
+
+  useEffect(() => {
+    fetchTokens();
+  }, [fetchTokens]);
 
   const handleFilterClick = () => {
     setIsFilterDrawerOpen(true);
@@ -15,32 +22,30 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white">
-      <header className="bg-gray-800 p-4 flex justify-between items-center">
-        <h1 className="text-xl font-bold">Sunnalytics</h1>
-        <div className="flex space-x-4">
-          <input
-            type="text"
-            placeholder="Search tokens..."
-            className="p-2 border border-gray-600 rounded bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-          <button
-            onClick={handleFilterClick}
-            className="px-4 py-2 bg-yellow-500 text-black rounded hover:bg-yellow-400 transition-colors"
-          >
-            Filter
-          </button>
+    <div className="min-h-screen flex flex-col pb-safe-area-inset-bottom bg-gray-900 text-white">
+      <main className="flex-1 p-4">
+        <div className="flex justify-between items-center mb-4">
+          <h1 className="text-2xl font-bold">Market</h1>
+          <div className="text-sm text-gray-400">Portfolio</div>
         </div>
-      </header>
-      <main className="container mx-auto p-4">
-        <TokenTable
-          isFilterDrawerOpen={isFilterDrawerOpen}
-          onFilterClick={handleFilterClick}
-          onFilterClose={handleFilterClose}
-        />
+        {loading && <p className="text-center text-gray-400">Loading tokens...</p>}
+        {error && (
+          <p className="text-center text-red-500">
+            Error: {error}{' '}
+            <button onClick={fetchTokens} className="text-blue-500 underline">
+              Retry
+            </button>
+          </p>
+        )}
+        {!loading && !error && (
+          <TokenTable
+            isFilterDrawerOpen={isFilterDrawerOpen}
+            onFilterClick={handleFilterClick}
+            onFilterClose={handleFilterClose}
+          />
+        )}
       </main>
       <BottomNav onFilterClick={handleFilterClick} />
-      <FilterDrawer isOpen={isFilterDrawerOpen} onClose={handleFilterClose} />
     </div>
   );
 }
