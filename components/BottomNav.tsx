@@ -10,7 +10,7 @@ const BottomNav: React.FC<BottomNavProps> = ({ onFilterClick }) => {
   const router = useRouter();
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-gray-800 p-2 flex justify-around items-center border-t border-gray-700 shadow-lg">
+    <nav className="fixed bottom-0 left-0 right-0 bg-gray-800 h-16 p-2 flex justify-around items-center border-t border-gray-700 shadow-lg pb-safe-area-inset-bottom">
       <button
         onClick={() => router.push('/')}
         className={`flex flex-col items-center text-xs ${
