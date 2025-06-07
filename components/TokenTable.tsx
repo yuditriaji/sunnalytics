@@ -1,4 +1,4 @@
-import React, { useState, memo } from 'react';
+import React, { useState, useMemo, memo } from 'react';
 import { useTokenStore } from '../stores/useTokenStore';
 import FilterDrawer from './FilterDrawer';
 import { FaSort } from 'react-icons/fa';
@@ -43,6 +43,7 @@ const TokenTable: React.FC<TokenTableProps> = memo(({ isFilterDrawerOpen, onFilt
     'potentialMultiplier',
   ]);
   const [isColumnModalVisible, setIsColumnModalVisible] = useState(false);
+  const [isSortModalVisible, setIsSortModalVisible] = useState(false);
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
 
   const toggleColumn = (key: string) => {
@@ -59,6 +60,14 @@ const TokenTable: React.FC<TokenTableProps> = memo(({ isFilterDrawerOpen, onFilt
     setIsColumnModalVisible(false);
   };
 
+  const showSortModal = () => {
+    setIsSortModalVisible(true);
+  };
+
+  const handleSortClose = () => {
+    setIsSortModalVisible(false);
+  };
+
   const requestSort = (key: string) => {
     setSortConfig(prev => {
       if (!prev || prev.key !== key) {
@@ -66,9 +75,10 @@ const TokenTable: React.FC<TokenTableProps> = memo(({ isFilterDrawerOpen, onFilt
       }
       return prev.direction === 'asc' ? { key, direction: 'desc' } : null;
     });
+    handleSortClose();
   };
 
-  const sortedTokens = React.useMemo(() => {
+  const sortedTokens = useMemo(() => {
     if (!sortConfig) return filteredTokens;
     return [...filteredTokens].sort((a, b) => {
       if (a[sortConfig.key as keyof Token] === undefined || b[sortConfig.key as keyof Token] === undefined) return 0;
@@ -129,123 +139,35 @@ const TokenTable: React.FC<TokenTableProps> = memo(({ isFilterDrawerOpen, onFilt
             Filter
           </button>
           <button
-            onClick={() => requestSort('price')}
+            onClick={showSortModal}
             className="px-4 py-2 bg-gray-700 text-white rounded hover:bg-gray-600 transition-colors flex items-center"
           >
             <FaSort className="mr-1" /> Sort
           </button>
         </div>
       </div>
-      <div className="overflow-x-auto">
-        <div className="sm:hidden">
-          {sortedTokens.map((token: Token) => (
-            <div key={token.name} className="bg-gray-800 p-4 mb-2 rounded shadow">
-              <div className="font-bold">{token.name}</div>
-              {visibleColumns.map(col => (
-                <div key={col} className="text-sm">
-                  <span className="font-medium capitalize">{col.replace(/([A-Z])/g, ' $1')}:</span>{' '}
-                  {col === 'price' && formatNumber(token.price)}
-                  {col === 'marketCap' && formatNumber(token.marketCap, '')}
-                  {col === 'volume24h' && formatNumber(token.volume24h, '')}
-                  {col === 'transferVolume24h' && (token.transferVolume24h ? `$${token.transferVolume24h.toLocaleString()}` : '-')}
-                  {col === 'fullyDilutedValuation' && formatNumber(token.fullyDilutedValuation, '')}
-                  {col === 'volumeMarketCapRatio' && formatRatio(token.volumeMarketCapRatio)}
-                  {col === 'circulatingSupplyPercentage' && formatPercentage(token.circulatingSupplyPercentage)}
-                  {col === 'isVolumeHealthy' && formatBoolean(token.isVolumeHealthy)}
-                  {col === 'isCirculatingSupplyGood' && formatBoolean(token.isCirculatingSupplyGood)}
-                  {col === 'potentialMultiplier' && formatMultiplier(token.potentialMultiplier)}
-                  {col === 'symbol' && token.symbol.toUpperCase()}
-                  {col === 'category' && token.category}
-                </div>
-              ))}
-            </div>
-          ))}
-        </div>
-        <table className="min-w-full divide-y divide-gray-600 hidden sm:table">
-          <thead className="bg-gray-700">
-            <tr>
-              {columns.map(col => (
-                <th
-                  key={col}
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider"
-                >
-                  {col.charAt(0).toUpperCase() + col.slice(1).replace(/([A-Z])/g, ' $1')}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="bg-gray-800 divide-y divide-gray-600">
-            {sortedTokens.map((token: Token) => (
-              <tr key={token.name}>
-                {visibleColumns.includes('name') && (
-                  <td className="px-6 py-4 whitespace-nowrap text-white">
-                    {token.name}
-                  </td>
-                )}
-                {visibleColumns.includes('symbol') && (
-                  <td className="px-6 py-4 whitespace-nowrap text-white">
-                    {token.symbol.toUpperCase()}
-                  </td>
-                )}
-                {visibleColumns.includes('category') && (
-                  <td className="px-6 py-4 whitespace-nowrap text-white">
-                    {token.category}
-                  </td>
-                )}
-                {visibleColumns.includes('price') && (
-                  <td className="px-6 py-4 whitespace-nowrap text-white">
-                    {formatNumber(token.price)}
-                  </td>
-                )}
-                {visibleColumns.includes('marketCap') && (
-                  <td className="px-6 py-4 whitespace-nowrap text-white">
-                    {formatNumber(token.marketCap, '')}
-                  </td>
-                )}
-                {visibleColumns.includes('volume24h') && (
-                  <td className="px-6 py-4 whitespace-nowrap text-white">
-                    {formatNumber(token.volume24h, '')}
-                  </td>
-                )}
-                {visibleColumns.includes('transferVolume24h') && (
-                  <td className="px-6 py-4 whitespace-nowrap text-white">
-                    {token.transferVolume24h ? `$${token.transferVolume24h.toLocaleString()}` : '-'}
-                  </td>
-                )}
-                {visibleColumns.includes('fullyDilutedValuation') && (
-                  <td className="px-6 py-4 whitespace-nowrap text-white">
-                    {formatNumber(token.fullyDilutedValuation, '')}
-                  </td>
-                )}
-                {visibleColumns.includes('volumeMarketCapRatio') && (
-                  <td className="px-6 py-4 whitespace-nowrap text-white">
-                    {formatRatio(token.volumeMarketCapRatio)}
-                  </td>
-                )}
-                {visibleColumns.includes('circulatingSupplyPercentage') && (
-                  <td className="px-6 py-4 whitespace-nowrap text-white">
-                    {formatPercentage(token.circulatingSupplyPercentage)}
-                  </td>
-                )}
-                {visibleColumns.includes('isVolumeHealthy') && (
-                  <td className="px-6 py-4 whitespace-nowrap text-white">
-                    {formatBoolean(token.isVolumeHealthy)}
-                  </td>
-                )}
-                {visibleColumns.includes('isCirculatingSupplyGood') && (
-                  <td className="px-6 py-4 whitespace-nowrap text-white">
-                    {formatBoolean(token.isCirculatingSupplyGood)}
-                  </td>
-                )}
-                {visibleColumns.includes('potentialMultiplier') && (
-                  <td className="px-6 py-4 whitespace-nowrap text-white">
-                    {formatMultiplier(token.potentialMultiplier)}
-                  </td>
-                )}
-              </tr>
+      <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {sortedTokens.map((token: Token) => (
+          <div key={token.name} className="bg-gray-800 p-4 rounded shadow flex flex-col space-y-2">
+            <div className="font-bold">{token.name} ({token.symbol.toUpperCase()})</div>
+            {visibleColumns.map(col => (
+              <div key={col} className="text-sm">
+                <span className="font-medium capitalize">{col.replace(/([A-Z])/g, ' $1')}:</span>{' '}
+                {col === 'price' && formatNumber(token.price)}
+                {col === 'marketCap' && formatNumber(token.marketCap, '')}
+                {col === 'volume24h' && formatNumber(token.volume24h, '')}
+                {col === 'transferVolume24h' && (token.transferVolume24h ? `$${token.transferVolume24h.toLocaleString()}` : '-')}
+                {col === 'fullyDilutedValuation' && formatNumber(token.fullyDilutedValuation, '')}
+                {col === 'volumeMarketCapRatio' && formatRatio(token.volumeMarketCapRatio)}
+                {col === 'circulatingSupplyPercentage' && formatPercentage(token.circulatingSupplyPercentage)}
+                {col === 'isVolumeHealthy' && formatBoolean(token.isVolumeHealthy)}
+                {col === 'isCirculatingSupplyGood' && formatBoolean(token.isCirculatingSupplyGood)}
+                {col === 'potentialMultiplier' && formatMultiplier(token.potentialMultiplier)}
+                {col === 'category' && token.category}
+              </div>
             ))}
-          </tbody>
-        </table>
+          </div>
+        ))}
       </div>
       {isColumnModalVisible && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end justify-center z-50">
@@ -280,6 +202,39 @@ const TokenTable: React.FC<TokenTableProps> = memo(({ isFilterDrawerOpen, onFilt
             ))}
             <button
               onClick={handleColumnClose}
+              className="w-full mt-4 px-4 py-2 bg-green-500 text-white rounded hover:bg-green-400 transition-colors"
+            >
+              Done
+            </button>
+          </div>
+        </div>
+      )}
+      {isSortModalVisible && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end justify-center z-50">
+          <div className="bg-gray-800 w-full max-w-md p-4 rounded-t-lg">
+            <h2 className="text-lg font-bold text-white mb-4">Sort By</h2>
+            {[
+              'price',
+              'marketCap',
+              'volume24h',
+              'transferVolume24h',
+              'fullyDilutedValuation',
+              'volumeMarketCapRatio',
+              'circulatingSupplyPercentage',
+              'potentialMultiplier',
+            ].map(key => (
+              <div key={key} className="mb-2">
+                <button
+                  onClick={() => requestSort(key)}
+                  className="w-full text-left p-2 bg-gray-700 rounded hover:bg-gray-600 text-white flex justify-between"
+                >
+                  <span>{key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1')}</span>
+                  <span>{sortConfig?.key === key ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}</span>
+                </button>
+              </div>
+            ))}
+            <button
+              onClick={handleSortClose}
               className="w-full mt-4 px-4 py-2 bg-green-500 text-white rounded hover:bg-green-400 transition-colors"
             >
               Done
