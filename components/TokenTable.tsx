@@ -146,26 +146,65 @@ const TokenTable: React.FC<TokenTableProps> = memo(({ isFilterDrawerOpen, onFilt
           </button>
         </div>
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 gap-4">
         {sortedTokens.map((token: Token) => (
           <div key={token.name} className="bg-gray-800 p-4 rounded shadow flex flex-col space-y-2">
-            <div className="font-bold">{token.name} ({token.symbol.toUpperCase()})</div>
-            {visibleColumns.map(col => (
-              <div key={col} className="text-sm">
-                <span className="font-medium capitalize">{col.replace(/([A-Z])/g, ' $1')}:</span>{' '}
-                {col === 'price' && formatNumber(token.price)}
-                {col === 'marketCap' && formatNumber(token.marketCap, '')}
-                {col === 'volume24h' && formatNumber(token.volume24h, '')}
-                {col === 'transferVolume24h' && (token.transferVolume24h ? `$${token.transferVolume24h.toLocaleString()}` : '-')}
-                {col === 'fullyDilutedValuation' && formatNumber(token.fullyDilutedValuation, '')}
-                {col === 'volumeMarketCapRatio' && formatRatio(token.volumeMarketCapRatio)}
-                {col === 'circulatingSupplyPercentage' && formatPercentage(token.circulatingSupplyPercentage)}
-                {col === 'isVolumeHealthy' && formatBoolean(token.isVolumeHealthy)}
-                {col === 'isCirculatingSupplyGood' && formatBoolean(token.isCirculatingSupplyGood)}
-                {col === 'potentialMultiplier' && formatMultiplier(token.potentialMultiplier)}
-                {col === 'category' && token.category}
-              </div>
-            ))}
+            <div className="flex items-center space-x-2">
+              <span className="font-bold">{token.name}</span>
+              <span className="text-gray-400">({token.category})</span>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              {visibleColumns.includes('price') && (
+                <div className="text-sm">
+                  <span className="font-medium">Price:</span> {formatNumber(token.price)}
+                </div>
+              )}
+              {visibleColumns.includes('marketCap') && (
+                <div className="text-sm">
+                  <span className="font-medium">Market Cap:</span> {formatNumber(token.marketCap, '')}
+                </div>
+              )}
+              {visibleColumns.includes('volume24h') && (
+                <div className="text-sm">
+                  <span className="font-medium">Volume 24h:</span> {formatNumber(token.volume24h, '')}
+                </div>
+              )}
+              {visibleColumns.includes('transferVolume24h') && (
+                <div className="text-sm">
+                  <span className="font-medium">Transfer Vol 24h:</span> {token.transferVolume24h ? `$${token.transferVolume24h.toLocaleString()}` : '-'}
+                </div>
+              )}
+              {visibleColumns.includes('fullyDilutedValuation') && (
+                <div className="text-sm">
+                  <span className="font-medium">Fully Diluted Val:</span> {formatNumber(token.fullyDilutedValuation, '')}
+                </div>
+              )}
+              {visibleColumns.includes('volumeMarketCapRatio') && (
+                <div className="text-sm">
+                  <span className="font-medium">Vol/MC Ratio:</span> {formatRatio(token.volumeMarketCapRatio)}
+                </div>
+              )}
+              {visibleColumns.includes('circulatingSupplyPercentage') && (
+                <div className="text-sm">
+                  <span className="font-medium">Circ. Supply %:</span> {formatPercentage(token.circulatingSupplyPercentage)}
+                </div>
+              )}
+              {visibleColumns.includes('isVolumeHealthy') && (
+                <div className="text-sm">
+                  <span className="font-medium">Vol Healthy:</span> {formatBoolean(token.isVolumeHealthy)}
+                </div>
+              )}
+              {visibleColumns.includes('isCirculatingSupplyGood') && (
+                <div className="text-sm">
+                  <span className="font-medium">Circ. Supply Good:</span> {formatBoolean(token.isCirculatingSupplyGood)}
+                </div>
+              )}
+              {visibleColumns.includes('potentialMultiplier') && (
+                <div className="text-sm">
+                  <span className="font-medium">Potential Multiplier:</span> {formatMultiplier(token.potentialMultiplier)}
+                </div>
+              )}
+            </div>
           </div>
         ))}
       </div>
