@@ -1,7 +1,10 @@
-import React, { useState, useMemo, memo } from 'react';
+// components/TokenTable.tsx
+import React, { useState, useMemo, memo, useCallback } from 'react';
 import { useTokenStore } from '../stores/useTokenStore';
 import FilterDrawer from './FilterDrawer';
 import { FaSort } from 'react-icons/fa';
+import { FixedSizeList } from 'react-window';
+import debounce from 'lodash.debounce';
 
 interface Token {
   name: string;
@@ -17,6 +20,10 @@ interface Token {
   isVolumeHealthy?: boolean;
   isCirculatingSupplyGood?: boolean;
   potentialMultiplier?: number;
+  rank?: number;
+  liquidityScore?: number;
+  pumpDumpRiskScore?: number;
+  walletDistributionScore?: number;
 }
 
 interface TokenTableProps {
@@ -26,21 +33,18 @@ interface TokenTableProps {
 }
 
 const TokenTable: React.FC<TokenTableProps> = memo(({ isFilterDrawerOpen, onFilterClick, onFilterClose }) => {
-  const { filteredTokens } = useTokenStore();
+  const { filteredTokens, setFilteredTokens, tokens } = useTokenStore();
+  const [searchQuery, setSearchQuery] = useState('');
   const [visibleColumns, setVisibleColumns] = useState<string[]>([
-    'name',
     'symbol',
-    'category',
     'price',
-    'marketCap',
     'volume24h',
-    'transferVolume24h',
-    'fullyDilutedValuation',
+    'marketCap',
     'volumeMarketCapRatio',
-    'circulatingSupplyPercentage',
     'isVolumeHealthy',
-    'isCirculatingSupplyGood',
-    'potentialMultiplier',
+    'pumpDumpRiskScore',
+    'liquidityScore',
+    'walletDistributionScore',
   ]);
   const [isColumnModalVisible, setIsColumnModalVisible] = useState(false);
   const [isSortModalVisible, setIsSortModalVisible] = useState(false);
@@ -50,6 +54,25 @@ const TokenTable: React.FC<TokenTableProps> = memo(({ isFilterDrawerOpen, onFilt
     setVisibleColumns(prev =>
       prev.includes(key) ? prev.filter(col => col !== key) : [...prev, key]
     );
+  };
+
+  const debouncedSearch = useCallback(
+    debounce((query: string) => {
+      setFilteredTokens(
+        tokens.filter(
+          token =>
+            token.name.toLowerCase().includes(query.toLowerCase()) ||
+            token.symbol.toLowerCase().includes(query.toLowerCase())
+        )
+      );
+    }, 300),
+    [tokens, setFilteredTokens]
+  );
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const query = e.target.value;
+    setSearchQuery(query);
+    debouncedSearch(query);
   };
 
   const showColumnModal = () => {
@@ -81,28 +104,26 @@ const TokenTable: React.FC<TokenTableProps> = memo(({ isFilterDrawerOpen, onFilt
   const sortedTokens = useMemo(() => {
     if (!sortConfig) return filteredTokens;
     return [...filteredTokens].sort((a, b) => {
-      if (a[sortConfig.key as keyof Token] === undefined || b[sortConfig.key as keyof Token] === undefined) return 0;
+      const aValue = a[sortConfig.key as keyof Token];
+      const bValue = b[sortConfig.key as keyof Token];
+      if (aValue === undefined || bValue === undefined) return 0;
       if (sortConfig.direction === 'asc') {
-        return a[sortConfig.key as keyof Token]! > b[sortConfig.key as keyof Token]! ? 1 : -1;
+        return aValue > bValue ? 1 : -1;
       }
-      return a[sortConfig.key as keyof Token]! < b[sortConfig.key as keyof Token]! ? 1 : -1;
+      return aValue < bValue ? 1 : -1;
     });
   }, [filteredTokens, sortConfig]);
 
   const columns = [
-    'name',
     'symbol',
-    'category',
     'price',
-    'marketCap',
     'volume24h',
-    'transferVolume24h',
-    'fullyDilutedValuation',
+    'marketCap',
     'volumeMarketCapRatio',
-    'circulatingSupplyPercentage',
     'isVolumeHealthy',
-    'isCirculatingSupplyGood',
-    'potentialMultiplier',
+    'pumpDumpRiskScore',
+    'liquidityScore',
+    'walletDistributionScore',
   ].filter(col => visibleColumns.includes(col));
 
   const formatNumber = (value: number | undefined, suffix: string = '') => {
@@ -113,9 +134,48 @@ const TokenTable: React.FC<TokenTableProps> = memo(({ isFilterDrawerOpen, onFilt
   };
 
   const formatRatio = (value: number | undefined) => value !== undefined ? `${(value * 100).toFixed(2)}%` : '-';
-  const formatPercentage = (value: number | undefined) => value !== undefined ? `${value.toFixed(2)}%` : '-';
   const formatBoolean = (value: boolean | undefined) => value !== undefined ? (value ? 'Yes' : 'No') : '-';
-  const formatMultiplier = (value: number | undefined) => value !== undefined ? value.toFixed(2) : '-';
+  const formatScore = (value: number | undefined) => value !== undefined ? value.toFixed(2) : '-';
+
+  const Row = ({ index, style }: { index: number; style: React.CSSProperties }) => {
+    const token = sortedTokens[index];
+    return (
+      <div
+        style={style}
+        className="bg-gray-800 p-2 flex items-center space-x-4 text-white rounded shadow-sm hover:bg-gray-700 transition-colors"
+        role="row"
+        aria-label={`Token ${token.symbol}`}
+      >
+        {columns.map(col => (
+          <div key={col} className="flex-1 text-sm truncate" role="cell">
+            {col === 'symbol' ? (
+              <span>{token.symbol}</span>
+            ) : col === 'price' ? (
+              <button className="bg-green-500 text-black px-2 py-1 rounded hover:bg-green-400 transition-colors">
+                Buy ${formatNumber(token.price)}
+              </button>
+            ) : col === 'volume24h' ? (
+              formatNumber(token.volume24h)
+            ) : col === 'marketCap' ? (
+              formatNumber(token.marketCap)
+            ) : col === 'volumeMarketCapRatio' ? (
+              formatRatio(token.volumeMarketCapRatio)
+            ) : col === 'isVolumeHealthy' ? (
+              formatBoolean(token.isVolumeHealthy)
+            ) : col === 'pumpDumpRiskScore' ? (
+              formatScore(token.pumpDumpRiskScore)
+            ) : col === 'liquidityScore' ? (
+              formatScore(token.liquidityScore)
+            ) : col === 'walletDistributionScore' ? (
+              formatScore(token.walletDistributionScore)
+            ) : (
+              '-'
+            )}
+          </div>
+        ))}
+      </div>
+    );
+  };
 
   return (
     <div className="p-4">
@@ -123,109 +183,97 @@ const TokenTable: React.FC<TokenTableProps> = memo(({ isFilterDrawerOpen, onFilt
         <input
           type="text"
           placeholder="Search tokens..."
-          className="w-full sm:max-w-xs p-2 border border-gray-300 rounded bg-gray-800 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          value={searchQuery}
+          onChange={handleSearchChange}
+          className="w-full sm:max-w-xs p-2 border border-gray-600 rounded bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          aria-label="Search tokens"
         />
         <div className="mt-2 sm:mt-0 sm:ml-4 flex space-x-2">
+          <select
+            onChange={e => requestSort(e.target.value)}
+            className="p-2 bg-gray-700 text-white rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+            aria-label="Sort tokens by"
+          >
+            <option value="">Sort By</option>
+            <option value="marketCap">Market Cap</option>
+            <option value="volume24h">Volume 24h</option>
+            <option value="price">Price</option>
+            <option value="liquidityScore">Liquidity Score</option>
+            <option value="pumpDumpRiskScore">Pump/Dump Risk</option>
+            <option value="walletDistributionScore">Wallet Dist Score</option>
+          </select>
           <button
             onClick={showColumnModal}
-            className="px-4 py-2 bg-gray-700 text-white rounded hover:bg-gray-600 transition-colors"
+            className="px-4 py-2 bg-gray-700 text-white rounded hover:bg-gray-600 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
+            aria-label="Customize table columns"
           >
             Add/Remove Columns
           </button>
           <button
             onClick={onFilterClick}
-            className="px-4 py-2 bg-yellow-500 text-black rounded hover:bg-yellow-400 transition-colors"
+            className="px-4 py-2 bg-yellow-500 text-black rounded hover:bg-yellow-400 transition-colors focus:outline-none focus:ring-2 focus:ring-yellow-500"
+            aria-label="Open filter drawer"
           >
             Filter
           </button>
           <button
             onClick={showSortModal}
-            className="px-4 py-2 bg-gray-700 text-white rounded hover:bg-gray-600 transition-colors flex items-center"
+            className="px-4 py-2 bg-gray-700 text-white rounded hover:bg-gray-600 transition-colors flex items-center focus:outline-none focus:ring-2 focus:ring-blue-500"
+            aria-label="Open sort options"
           >
             <FaSort className="mr-1" /> Sort
           </button>
         </div>
       </div>
-      <div className="grid grid-cols-1 gap-4">
-        {sortedTokens.map((token: Token) => (
-          <div key={token.name} className="bg-gray-800 p-4 rounded shadow flex flex-col space-y-2">
-            <div className="flex items-center space-x-2">
-              <span className="font-bold">{token.name}</span>
-              <span className="text-gray-400">({token.category})</span>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              {visibleColumns.includes('price') && (
-                <div className="text-sm">
-                  <span className="font-medium">Price:</span> {formatNumber(token.price)}
-                </div>
-              )}
-              {visibleColumns.includes('marketCap') && (
-                <div className="text-sm">
-                  <span className="font-medium">Market Cap:</span> {formatNumber(token.marketCap, '')}
-                </div>
-              )}
-              {visibleColumns.includes('volume24h') && (
-                <div className="text-sm">
-                  <span className="font-medium">Volume 24h:</span> {formatNumber(token.volume24h, '')}
-                </div>
-              )}
-              {visibleColumns.includes('transferVolume24h') && (
-                <div className="text-sm">
-                  <span className="font-medium">Transfer Vol 24h:</span> {token.transferVolume24h ? `$${token.transferVolume24h.toLocaleString()}` : '-'}
-                </div>
-              )}
-              {visibleColumns.includes('fullyDilutedValuation') && (
-                <div className="text-sm">
-                  <span className="font-medium">Fully Diluted Val:</span> {formatNumber(token.fullyDilutedValuation, '')}
-                </div>
-              )}
-              {visibleColumns.includes('volumeMarketCapRatio') && (
-                <div className="text-sm">
-                  <span className="font-medium">Vol/MC Ratio:</span> {formatRatio(token.volumeMarketCapRatio)}
-                </div>
-              )}
-              {visibleColumns.includes('circulatingSupplyPercentage') && (
-                <div className="text-sm">
-                  <span className="font-medium">Circ. Supply %:</span> {formatPercentage(token.circulatingSupplyPercentage)}
-                </div>
-              )}
-              {visibleColumns.includes('isVolumeHealthy') && (
-                <div className="text-sm">
-                  <span className="font-medium">Vol Healthy:</span> {formatBoolean(token.isVolumeHealthy)}
-                </div>
-              )}
-              {visibleColumns.includes('isCirculatingSupplyGood') && (
-                <div className="text-sm">
-                  <span className="font-medium">Circ. Supply Good:</span> {formatBoolean(token.isCirculatingSupplyGood)}
-                </div>
-              )}
-              {visibleColumns.includes('potentialMultiplier') && (
-                <div className="text-sm">
-                  <span className="font-medium">Potential Multiplier:</span> {formatMultiplier(token.potentialMultiplier)}
-                </div>
-              )}
-            </div>
+      <div className="overflow-x-auto">
+        <div className="min-w-full">
+          <div
+            className="grid grid-cols-[minmax(80px,1fr)_minmax(100px,1fr)_minmax(100px,1fr)_minmax(100px,1fr)_minmax(120px,1fr)_minmax(100px,1fr)_minmax(120px,1fr)_minmax(120px,1fr)_minmax(120px,1fr)] gap-2 sticky top-0 bg-gray-900 z-10 p-2 text-white font-bold"
+            role="row"
+            aria-label="Table headers"
+          >
+            {columns.map(col => (
+              <div
+                key={col}
+                className="text-sm truncate"
+                role="columnheader"
+                aria-sort={sortConfig?.key === col ? (sortConfig.direction === 'asc' ? 'ascending' : 'descending') : 'none'}
+              >
+                {col === 'symbol' ? 'Symbol' : 
+                 col === 'volumeMarketCapRatio' ? 'Vol/Mkt Cap Ratio' : 
+                 col === 'isVolumeHealthy' ? 'Health' : 
+                 col === 'pumpDumpRiskScore' ? 'Pump/Dump Risk' : 
+                 col === 'walletDistributionScore' ? 'Wallet Dist Score' : 
+                 col.charAt(0).toUpperCase() + col.slice(1).replace(/([A-Z])/g, ' $1')}
+              </div>
+            ))}
           </div>
-        ))}
+          <div role="grid" aria-label="Token data table">
+            <FixedSizeList
+              height={400}
+              itemCount={sortedTokens.length}
+              itemSize={50}
+              width="100%"
+            >
+              {Row}
+            </FixedSizeList>
+          </div>
+        </div>
       </div>
       {isColumnModalVisible && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end justify-center z-50">
           <div className="bg-gray-800 w-full max-w-md p-4 rounded-t-lg">
             <h2 className="text-lg font-bold text-white mb-4">Customize Table Columns</h2>
             {[
-              'name',
               'symbol',
-              'category',
               'price',
-              'marketCap',
               'volume24h',
-              'transferVolume24h',
-              'fullyDilutedValuation',
+              'marketCap',
               'volumeMarketCapRatio',
-              'circulatingSupplyPercentage',
               'isVolumeHealthy',
-              'isCirculatingSupplyGood',
-              'potentialMultiplier',
+              'pumpDumpRiskScore',
+              'liquidityScore',
+              'walletDistributionScore',
             ].map(key => (
               <div key={key} className="flex items-center mb-2">
                 <input
@@ -233,15 +281,23 @@ const TokenTable: React.FC<TokenTableProps> = memo(({ isFilterDrawerOpen, onFilt
                   checked={visibleColumns.includes(key)}
                   onChange={() => toggleColumn(key)}
                   className="mr-2 h-4 w-4 text-green-500 bg-gray-700 border-gray-600 rounded focus:ring-green-500"
+                  id={`column-${key}`}
+                  aria-label={`Toggle ${key} column`}
                 />
-                <span className="text-white">
-                  {key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1')}
-                </span>
+                <label htmlFor={`column-${key}`} className="text-white">
+                  {key === 'symbol' ? 'Symbol' : 
+                   key === 'volumeMarketCapRatio' ? 'Vol/Mkt Cap Ratio' : 
+                   key === 'isVolumeHealthy' ? 'Health' : 
+                   key === 'pumpDumpRiskScore' ? 'Pump/Dump Risk' : 
+                   key === 'walletDistributionScore' ? 'Wallet Dist Score' : 
+                   key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1')}
+                </label>
               </div>
             ))}
             <button
               onClick={handleColumnClose}
-              className="w-full mt-4 px-4 py-2 bg-green-500 text-white rounded hover:bg-green-400 transition-colors"
+              className="w-full mt-4 px-4 py-2 bg-green-500 text-white rounded hover:bg-green-400 transition-colors focus:outline-none focus:ring-2 focus:ring-green-500"
+              aria-label="Close column customization"
             >
               Done
             </button>
@@ -256,25 +312,30 @@ const TokenTable: React.FC<TokenTableProps> = memo(({ isFilterDrawerOpen, onFilt
               'price',
               'marketCap',
               'volume24h',
-              'transferVolume24h',
-              'fullyDilutedValuation',
               'volumeMarketCapRatio',
-              'circulatingSupplyPercentage',
-              'potentialMultiplier',
+              'pumpDumpRiskScore',
+              'liquidityScore',
+              'walletDistributionScore',
             ].map(key => (
               <div key={key} className="mb-2">
                 <button
                   onClick={() => requestSort(key)}
-                  className="w-full text-left p-2 bg-gray-700 rounded hover:bg-gray-600 text-white flex justify-between"
+                  className="w-full text-left p-2 bg-gray-700 rounded hover:bg-gray-600 text-white flex justify-between focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  aria-label={`Sort by ${key}`}
                 >
-                  <span>{key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1')}</span>
+                  <span>{key === 'volumeMarketCapRatio' ? 'Vol/Mkt Cap Ratio' : 
+                         key === 'isVolumeHealthy' ? 'Health' : 
+                         key === 'pumpDumpRiskScore' ? 'Pump/Dump Risk' : 
+                         key === 'walletDistributionScore' ? 'Wallet Dist Score' : 
+                         key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1')}</span>
                   <span>{sortConfig?.key === key ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}</span>
                 </button>
               </div>
             ))}
             <button
               onClick={handleSortClose}
-              className="w-full mt-4 px-4 py-2 bg-green-500 text-white rounded hover:bg-green-400 transition-colors"
+              className="w-full mt-4 px-4 py-2 bg-green-500 text-white rounded hover:bg-green-400 transition-colors focus:outline-none focus:ring-2 focus:ring-green-500"
+              aria-label="Close sort options"
             >
               Done
             </button>

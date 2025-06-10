@@ -3,6 +3,7 @@ import BottomNav from '../components/BottomNav';
 import TokenTable from '../components/TokenTable';
 import { useTokenStore } from '../stores/useTokenStore';
 import { useTokenData } from '../hooks/useTokenData';
+import TabbedFilters from '../components/TabbedFilters';
 
 export default function Home() {
   const { loading, error } = useTokenStore();
@@ -28,6 +29,7 @@ export default function Home() {
           <h1 className="text-2xl font-bold">Market</h1>
           <div className="text-sm text-gray-400">Portfolio</div>
         </div>
+        <TabbedFilters />
         {loading && <p className="text-center text-gray-400">Loading tokens...</p>}
         {error && (
           <p className="text-center text-red-500">

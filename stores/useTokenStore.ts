@@ -16,6 +16,10 @@ interface Token {
   isVolumeHealthy?: boolean;
   isCirculatingSupplyGood?: boolean;
   potentialMultiplier?: number;
+  rank?: number;
+  liquidityScore?: number;
+  pumpDumpRiskScore?: number;
+  walletDistributionScore?: number;
   stats?: {
     priceChange24h?: number;
     volatilityScore24h?: number;

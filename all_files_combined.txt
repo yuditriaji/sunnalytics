@@ -102,21 +102,27 @@ module.exports = withPWA(nextConfig);
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx}\""
   },
   "dependencies": {
+    "chart.js": "^4.4.9",
     "framer-motion": "^12.14.0",
     "localforage": "^1.10.0",
     "next": "^14.2.29",
     "next-pwa": "^5.6.0",
     "react": "^18.3.1",
+    "react-chartjs-2": "^5.3.0",
     "react-dom": "^18.3.1",
-    "react-icons": "^5.3.0",
+    "react-icons": "^5.5.0",
+    "react-responsive": "^10.0.1",
+    "react-window": "^1.8.11",
     "swr": "^2.2.5",
     "tailwindcss": "^3.4.1",
     "zustand": "^5.0.0-rc.2"
   },
   "devDependencies": {
+    "@types/lodash.debounce": "^4.0.9",
     "@types/node": "^22.7.7",
     "@types/react": "^18.3.11",
     "@types/react-dom": "^18.3.1",
+    "@types/react-window": "^1.8.8",
     "autoprefixer": "^10.4.19",
     "eslint": "^8.57.1",
     "eslint-config-next": "^14.2.29",
@@ -125,6 +131,7 @@ module.exports = withPWA(nextConfig);
     "typescript": "^5.6.3"
   }
 }
+
 === .\postcss.config.js ===
 module.exports = {
 plugins: {
@@ -216,191 +223,660 @@ Project Tree (excluding node_modules, .next, package-lock.json):
 === .\components\BottomNav.tsx ===
 import React from 'react';
 import { useRouter } from 'next/router';
-import { FaHome, FaChartLine, FaCog, FaFilter } from 'react-icons/fa';
+import { FaChartLine, FaFilter, FaWallet, FaHome } from 'react-icons/fa';
 
 interface BottomNavProps {
-  className?: string;
+  onFilterClick?: () => void;
 }
 
-const BottomNav: React.FC<BottomNavProps> = ({ className }) => {
+const BottomNav: React.FC<BottomNavProps> = ({ onFilterClick }) => {
   const router = useRouter();
-  const { pathname } = router;
-
-  const menuItems = [
-    { key: '/', label: 'Home', icon: <FaHome className="h-5 w-5" /> },
-    { key: '/analytics', label: 'Analytics', icon: <FaChartLine className="h-5 w-5" /> },
-    { key: '/filter', label: 'Filter', icon: <FaFilter className="h-5 w-5" /> },
-    { key: '/settings', label: 'Settings', icon: <FaCog className="h-5 w-5" /> },
-  ];
-
-  const handleClick = (key: string) => {
-    router.push(key);
-  };
 
   return (
-    <nav
-      className={`fixed bottom-0 left-0 right-0 bg-white shadow-lg border-t border-gray-200 ${className}`}
-    >
-      <div className="flex justify-around items-center h-16">
-        {menuItems.map(item => (
-          <button
-            key={item.key}
-            onClick={() => handleClick(item.key)}
-            className={`flex flex-col items-center justify-center w-full h-full text-gray-600 hover:text-blue-500 transition-colors ${
-              pathname === item.key ? 'text-blue-500' : ''
-            }`}
-          >
-            {item.icon}
-            <span className="text-xs mt-1">{item.label}</span>
-          </button>
-        ))}
-      </div>
+    <nav className="fixed bottom-0 left-0 right-0 bg-gray-800 h-20 p-2 flex justify-around items-center border-t border-gray-700 shadow-lg pb-safe-area-inset-bottom">
+      <button
+        onClick={() => router.push('/')}
+        className={`flex flex-col items-center text-xs ${
+          router.pathname === '/' ? 'text-yellow-400' : 'text-gray-400'
+        } hover:text-yellow-400 transition-all duration-200 hover:scale-110`}
+      >
+        <FaHome className="text-lg mb-1" />
+        <span>Market</span>
+      </button>
+      <button
+        onClick={() => router.push('/portfolio')}
+        className={`flex flex-col items-center text-xs ${
+          router.pathname === '/portfolio' ? 'text-yellow-400' : 'text-gray-400'
+        } hover:text-yellow-400 transition-all duration-200 hover:scale-110`}
+      >
+        <FaWallet className="text-lg mb-1" />
+        <span>Portfolio</span>
+      </button>
+      <button
+        onClick={onFilterClick}
+        className="flex flex-col items-center text-xs text-gray-400 hover:text-yellow-400 transition-all duration-200 hover:scale-110"
+      >
+        <FaFilter className="text-lg mb-1" />
+        <span>Filter</span>
+      </button>
+      <button
+        onClick={() => router.push('/charts')}
+        className={`flex flex-col items-center text-xs ${
+          router.pathname === '/charts' ? 'text-yellow-400' : 'text-gray-400'
+        } hover:text-yellow-400 transition-all duration-200 hover:scale-110`}
+      >
+        <FaChartLine className="text-lg mb-1" />
+        <span>Charts</span>
+      </button>
     </nav>
   );
 };
 
 export default BottomNav;
 === .\components\FilterDrawer.tsx ===
-import React from 'react';
-import { Drawer, Form, Input, Select, Button, Slider, Space } from 'antd';
+import React, { useState, useEffect } from 'react';
 import { useTokenStore } from '../stores/useTokenStore';
 
 interface FilterDrawerProps {
-  visible: boolean;
+  isOpen: boolean;
   onClose: () => void;
 }
 
-const FilterDrawer: React.FC<FilterDrawerProps> = ({ visible, onClose }) => {
-  const [form] = Form.useForm();
-  const { setFilters } = useTokenStore();
+const FilterDrawer: React.FC<FilterDrawerProps> = ({ isOpen, onClose }) => {
+  const { filteredTokens, setFilteredTokens, tokens } = useTokenStore();
+  const [filters, setFilters] = useState({
+    category: '',
+    minPrice: '',
+    maxPrice: '',
+    minVolumeMarketCapRatio: '',
+    maxVolumeMarketCapRatio: '',
+    minCirculatingSupplyPercentage: '',
+    maxCirculatingSupplyPercentage: '',
+    isVolumeHealthy: '',
+    isCirculatingSupplyGood: '',
+  });
 
-  const handleApply = () => {
-    const values = form.getFieldsValue();
-    setFilters({
-      category: values.category,
-      priceRange: values.priceRange,
-      marketCapRange: values.marketCapRange,
-      search: values.search,
-    });
-    onClose();
+  useEffect(() => {
+    const applyFilters = () => {
+      let filtered = [...tokens];
+      if (filters.category) {
+        filtered = filtered.filter(token => token.category === filters.category);
+      }
+      if (filters.minPrice) {
+        const min = parseFloat(filters.minPrice);
+        filtered = filtered.filter(token => token.price !== undefined && token.price >= min);
+      }
+      if (filters.maxPrice) {
+        const max = parseFloat(filters.maxPrice);
+        filtered = filtered.filter(token => token.price !== undefined && token.price <= max);
+      }
+      if (filters.minVolumeMarketCapRatio) {
+        const min = parseFloat(filters.minVolumeMarketCapRatio) / 100; // Convert percentage to ratio
+        filtered = filtered.filter(token => token.volumeMarketCapRatio !== undefined && token.volumeMarketCapRatio >= min);
+      }
+      if (filters.maxVolumeMarketCapRatio) {
+        const max = parseFloat(filters.maxVolumeMarketCapRatio) / 100; // Convert percentage to ratio
+        filtered = filtered.filter(token => token.volumeMarketCapRatio !== undefined && token.volumeMarketCapRatio <= max);
+      }
+      if (filters.minCirculatingSupplyPercentage) {
+        const min = parseFloat(filters.minCirculatingSupplyPercentage);
+        filtered = filtered.filter(token => token.circulatingSupplyPercentage !== undefined && token.circulatingSupplyPercentage >= min);
+      }
+      if (filters.maxCirculatingSupplyPercentage) {
+        const max = parseFloat(filters.maxCirculatingSupplyPercentage);
+        filtered = filtered.filter(token => token.circulatingSupplyPercentage !== undefined && token.circulatingSupplyPercentage <= max);
+      }
+      if (filters.isVolumeHealthy === 'true') {
+        filtered = filtered.filter(token => token.isVolumeHealthy === true);
+      } else if (filters.isVolumeHealthy === 'false') {
+        filtered = filtered.filter(token => token.isVolumeHealthy === false);
+      }
+      if (filters.isCirculatingSupplyGood === 'true') {
+        filtered = filtered.filter(token => token.isCirculatingSupplyGood === true);
+      } else if (filters.isCirculatingSupplyGood === 'false') {
+        filtered = filtered.filter(token => token.isCirculatingSupplyGood === false);
+      }
+      setFilteredTokens(filtered);
+    };
+
+    applyFilters();
+  }, [filters, tokens, setFilteredTokens]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFilters(prev => ({ ...prev, [name]: value }));
   };
 
+  const handleReset = () => {
+    setFilters({
+      category: '',
+      minPrice: '',
+      maxPrice: '',
+      minVolumeMarketCapRatio: '',
+      maxVolumeMarketCapRatio: '',
+      minCirculatingSupplyPercentage: '',
+      maxCirculatingSupplyPercentage: '',
+      isVolumeHealthy: '',
+      isCirculatingSupplyGood: '',
+    });
+    setFilteredTokens(tokens);
+  };
+
+  if (!isOpen) return null;
+
   return (
-    <Drawer
-      title="Filter Tokens"
-      placement="bottom"
-      onClose={onClose}
-      open={visible}
-      height={400}
-      extra={
-        <Space>
-          <Button
-            onClick={() => {
-              form.resetFields();
-              setFilters({});
-            }}
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end justify-center z-50">
+      <div className="bg-gray-800 w-full max-w-md p-4 rounded-t-lg">
+        <h2 className="text-lg font-bold text-white mb-4">Filter Tokens</h2>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-300">Category</label>
+            <select
+              name="category"
+              value={filters.category}
+              onChange={handleChange}
+              className="mt-1 block w-full p-2 bg-gray-700 border border-gray-600 rounded text-white"
+            >
+              <option value="">All</option>
+              <option value="altcoin">Altcoin</option>
+              <option value="defi">DeFi</option>
+              <option value="memecoin">Memecoin</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-300">Min Price ($)</label>
+            <input
+              type="number"
+              name="minPrice"
+              value={filters.minPrice}
+              onChange={handleChange}
+              className="mt-1 block w-full p-2 bg-gray-700 border border-gray-600 rounded text-white"
+              placeholder="0.00"
+              min="0"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-300">Max Price ($)</label>
+            <input
+              type="number"
+              name="maxPrice"
+              value={filters.maxPrice}
+              onChange={handleChange}
+              className="mt-1 block w-full p-2 bg-gray-700 border border-gray-600 rounded text-white"
+              placeholder="0.00"
+              min="0"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-300">Min Volume Market Cap Ratio (%)</label>
+            <input
+              type="number"
+              name="minVolumeMarketCapRatio"
+              value={filters.minVolumeMarketCapRatio}
+              onChange={handleChange}
+              className="mt-1 block w-full p-2 bg-gray-700 border border-gray-600 rounded text-white"
+              placeholder="0.00"
+              min="0"
+              step="0.01"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-300">Max Volume Market Cap Ratio (%)</label>
+            <input
+              type="number"
+              name="maxVolumeMarketCapRatio"
+              value={filters.maxVolumeMarketCapRatio}
+              onChange={handleChange}
+              className="mt-1 block w-full p-2 bg-gray-700 border border-gray-600 rounded text-white"
+              placeholder="100.00"
+              min="0"
+              step="0.01"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-300">Min Circulating Supply (%)</label>
+            <input
+              type="number"
+              name="minCirculatingSupplyPercentage"
+              value={filters.minCirculatingSupplyPercentage}
+              onChange={handleChange}
+              className="mt-1 block w-full p-2 bg-gray-700 border border-gray-600 rounded text-white"
+              placeholder="0.00"
+              min="0"
+              step="0.01"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-300">Max Circulating Supply (%)</label>
+            <input
+              type="number"
+              name="maxCirculatingSupplyPercentage"
+              value={filters.maxCirculatingSupplyPercentage}
+              onChange={handleChange}
+              className="mt-1 block w-full p-2 bg-gray-700 border border-gray-600 rounded text-white"
+              placeholder="100.00"
+              min="0"
+              step="0.01"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-300">Is Volume Healthy</label>
+            <select
+              name="isVolumeHealthy"
+              value={filters.isVolumeHealthy}
+              onChange={handleChange}
+              className="mt-1 block w-full p-2 bg-gray-700 border border-gray-600 rounded text-white"
+            >
+              <option value="">All</option>
+              <option value="true">Yes</option>
+              <option value="false">No</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-300">Is Circulating Supply Good</label>
+            <select
+              name="isCirculatingSupplyGood"
+              value={filters.isCirculatingSupplyGood}
+              onChange={handleChange}
+              className="mt-1 block w-full p-2 bg-gray-700 border border-gray-600 rounded text-white"
+            >
+              <option value="">All</option>
+              <option value="true">Yes</option>
+              <option value="false">No</option>
+            </select>
+          </div>
+        </div>
+        <div className="mt-6 flex justify-end space-x-4">
+          <button
+            onClick={handleReset}
+            className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-500 transition-colors"
           >
             Reset
-          </Button>
-          <Button type="primary" onClick={handleApply}>
+          </button>
+          <button
+            onClick={onClose}
+            className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-400 transition-colors"
+          >
             Apply
-          </Button>
-        </Space>
-      }
-    >
-      <Form form={form} layout="vertical">
-        <Form.Item name="category" label="Category">
-          <Select
-            mode="multiple"
-            placeholder="Select categories"
-            options={[
-              { label: 'Memecoin', value: 'memecoin' },
-              { label: 'DeFi', value: 'defi' },
-              { label: 'Altcoin', value: 'altcoin' },
-              { label: 'Bitcoin', value: 'bitcoin' },
-            ]}
-          />
-        </Form.Item>
-        <Form.Item name="priceRange" label="Price Range (USD)">
-          <Slider range min={0} max={150000} step={1000} defaultValue={[0, 150000]} />
-        </Form.Item>
-        <Form.Item name="marketCapRange" label="Market Cap Range (USD)">
-          <Slider
-            range
-            min={0}
-            max={3000000000000}
-            step={100000000}
-            defaultValue={[0, 3000000000000]}
-          />
-        </Form.Item>
-        <Form.Item name="search" label="Search">
-          <Input placeholder="Search by name or symbol" />
-        </Form.Item>
-      </Form>
-    </Drawer>
+          </button>
+        </div>
+      </div>
+    </div>
   );
 };
 
 export default FilterDrawer;
+=== .\components\TabbedFilters.tsx ===
+// components/TabbedFilters.tsx
+import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useTokenStore } from '../stores/useTokenStore';
+
+const tabs = [
+  { id: 'all', label: 'All' },
+  { id: 'highlights', label: 'Highlights', badge: '🔥' },
+  { id: 'trending', label: 'Trending', badge: '📈' },
+  { id: 'pumpfun', label: 'Pump.fun' },
+  { id: 'ecosystems', label: 'Ecosystems' },
+];
+
+const TabbedFilters: React.FC = () => {
+  const { setFilteredTokens, tokens } = useTokenStore();
+  const [activeTab, setActiveTab] = useState('all');
+
+  const handleTabClick = (tabId: string) => {
+    setActiveTab(tabId);
+    if (tabId === 'all') {
+      setFilteredTokens(tokens);
+    } else {
+      setFilteredTokens(tokens.filter(token => token.category.toLowerCase() === tabId));
+    }
+  };
+
+  return (
+    <div className="mb-4">
+      <div
+        className="flex space-x-2 overflow-x-auto pb-2"
+        role="tablist"
+        aria-label="Token Categories"
+      >
+        {tabs.map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => handleTabClick(tab.id)}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              activeTab === tab.id
+                ? 'bg-yellow-500 text-black'
+                : 'bg-gray-700 text-white hover:bg-gray-600'
+            }`}
+            role="tab"
+            aria-selected={activeTab === tab.id}
+            aria-controls={`panel-${tab.id}`}
+          >
+            {tab.label}
+            {tab.badge && <span className="ml-1">{tab.badge}</span>}
+          </button>
+        ))}
+      </div>
+      <AnimatePresence>
+        <motion.div
+          key={activeTab}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -10 }}
+          transition={{ duration: 0.3 }}
+          id={`panel-${activeTab}`}
+          role="tabpanel"
+          aria-labelledby={activeTab}
+        >
+          {/* Content managed by TokenTable */}
+        </motion.div>
+      </AnimatePresence>
+    </div>
+  );
+};
+
+export default TabbedFilters;
 === .\components\TokenTable.tsx ===
-  import React, { useState, memo } from 'react';
-  import { useTokenStore } from '../stores/useTokenStore';
+// components/TokenTable.tsx
+import React, { useState, useMemo, memo, useCallback } from 'react';
+import { useTokenStore } from '../stores/useTokenStore';
+import FilterDrawer from './FilterDrawer';
+import { FaSort } from 'react-icons/fa';
+import { FixedSizeList } from 'react-window';
+import debounce from 'lodash.debounce';
 
-  interface Token {
-    id: string;
-    name: string;
-    symbol: string;
-    category: string;
-    marketCap?: number;
-    volume24h?: number;
-    price?: number;
-    transferVolume24h?: number;
-    createdAt: string;
-    updatedAt: string;
-    stats?: {
-      priceChange24h: number;
-      volatilityScore24h: number;
-      liquidityScore: number;
-      transferVolume24h: number;
-    };
-  }
+interface Token {
+  name: string;
+  symbol: string;
+  category: string;
+  price?: number;
+  marketCap?: number;
+  volume24h?: number;
+  transferVolume24h?: number;
+  fullyDilutedValuation?: number;
+  volumeMarketCapRatio?: number;
+  circulatingSupplyPercentage?: number;
+  isVolumeHealthy?: boolean;
+  isCirculatingSupplyGood?: boolean;
+  potentialMultiplier?: number;
+  rank?: number;
+  liquidityScore?: number;
+  pumpDumpRiskScore?: number;
+  walletDistributionScore?: number;
+}
 
-  const TokenTable: React.FC = memo(() => {
-    const { filteredTokens } = useTokenStore();
-    const [visibleColumns, setVisibleColumns] = useState<string[]>([
-      'name',
-      'symbol',
-      'category',
-      'price',
-      'marketCap',
-      'volume24h',
-      'transferVolume24h',
-      'volatilityScore24h',
-    ]);
+interface TokenTableProps {
+  isFilterDrawerOpen: boolean;
+  onFilterClick: () => void;
+  onFilterClose: () => void;
+}
 
-    const toggleColumn = (key: string) => {
-      setVisibleColumns(prev =>
-        prev.includes(key) ? prev.filter(col => col !== key) : [...prev, key]
+const TokenTable: React.FC<TokenTableProps> = memo(({ isFilterDrawerOpen, onFilterClick, onFilterClose }) => {
+  const { filteredTokens, setFilteredTokens, tokens } = useTokenStore();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [visibleColumns, setVisibleColumns] = useState<string[]>([
+    'rank',
+    'name',
+    'symbol',
+    'category',
+    'price',
+    'marketCap',
+    'volume24h',
+    'transferVolume24h',
+    'fullyDilutedValuation',
+    'volumeMarketCapRatio',
+    'circulatingSupplyPercentage',
+    'isVolumeHealthy',
+    'isCirculatingSupplyGood',
+    'potentialMultiplier',
+    'liquidityScore',
+    'pumpDumpRiskScore',
+    'walletDistributionScore',
+  ]);
+  const [isColumnModalVisible, setIsColumnModalVisible] = useState(false);
+  const [isSortModalVisible, setIsSortModalVisible] = useState(false);
+  const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
+
+  const toggleColumn = (key: string) => {
+    setVisibleColumns(prev =>
+      prev.includes(key) ? prev.filter(col => col !== key) : [...prev, key]
+    );
+  };
+
+  const debouncedSearch = useCallback(
+    debounce((query: string) => {
+      setFilteredTokens(
+        tokens.filter(
+          token =>
+            token.name.toLowerCase().includes(query.toLowerCase()) ||
+            token.symbol.toLowerCase().includes(query.toLowerCase())
+        )
       );
-    };
+    }, 300),
+    [tokens, setFilteredTokens]
+  );
 
-    const columns = [
-      'name',
-      'symbol',
-      'category',
-      'price',
-      'marketCap',
-      'volume24h',
-      'transferVolume24h',
-      'volatilityScore24h',
-    ].filter(col => visibleColumns.includes(col));
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const query = e.target.value;
+    setSearchQuery(query);
+    debouncedSearch(query);
+  };
 
+  const showColumnModal = () => {
+    setIsColumnModalVisible(true);
+  };
+
+  const handleColumnClose = () => {
+    setIsColumnModalVisible(false);
+  };
+
+  const showSortModal = () => {
+    setIsSortModalVisible(true);
+  };
+
+  const handleSortClose = () => {
+    setIsSortModalVisible(false);
+  };
+
+  const requestSort = (key: string) => {
+    setSortConfig(prev => {
+      if (!prev || prev.key !== key) {
+        return { key, direction: 'asc' };
+      }
+      return prev.direction === 'asc' ? { key, direction: 'desc' } : null;
+    });
+    handleSortClose();
+  };
+
+  const sortedTokens = useMemo(() => {
+    if (!sortConfig) return filteredTokens;
+    return [...filteredTokens].sort((a, b) => {
+      const aValue = a[sortConfig.key as keyof Token];
+      const bValue = b[sortConfig.key as keyof Token];
+      if (aValue === undefined || bValue === undefined) return 0;
+      if (sortConfig.direction === 'asc') {
+        return aValue > bValue ? 1 : -1;
+      }
+      return aValue < bValue ? 1 : -1;
+    });
+  }, [filteredTokens, sortConfig]);
+
+  const columns = [
+    'rank',
+    'name',
+    'symbol',
+    'category',
+    'price',
+    'marketCap',
+    'volume24h',
+    'transferVolume24h',
+    'fullyDilutedValuation',
+    'volumeMarketCapRatio',
+    'circulatingSupplyPercentage',
+    'isVolumeHealthy',
+    'isCirculatingSupplyGood',
+    'potentialMultiplier',
+    'liquidityScore',
+    'pumpDumpRiskScore',
+    'walletDistributionScore',
+  ].filter(col => visibleColumns.includes(col));
+
+  const formatNumber = (value: number | undefined, suffix: string = '') => {
+    if (value === undefined || value === 0) return '-';
+    if (value >= 1e9) return `$${Math.floor(value / 1e9)}${suffix}B`;
+    if (value >= 1e6) return `$${Math.floor(value / 1e6)}${suffix}M`;
+    return `$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 6 })}`;
+  };
+
+  const formatRatio = (value: number | undefined) => value !== undefined ? `${(value * 100).toFixed(2)}%` : '-';
+  const formatPercentage = (value: number | undefined) => value !== undefined ? `${value.toFixed(2)}%` : '-';
+  const formatBoolean = (value: boolean | undefined) => value !== undefined ? (value ? 'Yes' : 'No') : '-';
+  const formatMultiplier = (value: number | undefined) => value !== undefined ? value.toFixed(2) : '-';
+  const formatScore = (value: number | undefined) => value !== undefined ? value.toFixed(2) : '-';
+
+  const Row = ({ index, style }: { index: number; style: React.CSSProperties }) => {
+    const token = sortedTokens[index];
     return (
-      <div className="p-4">
-        <div className="mb-4 overflow-x-auto whitespace-nowrap">
-          <div className="flex space-x-2">
-            <span className="font-medium">Toggle Columns:</span>
+      <div
+        style={style}
+        className="bg-gray-800 p-4 rounded shadow flex flex-col space-y-2"
+        role="row"
+        aria-label={`Token ${token.name}`}
+      >
+        <div className="flex items-center space-x-2">
+          <span className="font-bold text-white">{token.name}</span>
+          <span className="text-gray-400">({token.category})</span>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2" role="rowgroup">
+          {columns.map(col => (
+            <div key={col} className="text-sm" role="cell">
+              <span className="font-medium text-gray-300">
+                {col.charAt(0).toUpperCase() + col.slice(1).replace(/([A-Z])/g, ' $1')}:
+              </span>{' '}
+              {col === 'price' || col === 'marketCap' || col === 'volume24h' || col === 'fullyDilutedValuation'
+                ? formatNumber(
+                    typeof token[col as keyof Token] === 'number'
+                      ? (token[col as keyof Token] as number)
+                      : undefined
+                  )
+                : col === 'transferVolume24h'
+                ? token.transferVolume24h
+                  ? `$${token.transferVolume24h.toLocaleString()}`
+                  : '-'
+                : col === 'volumeMarketCapRatio'
+                ? formatRatio(token.volumeMarketCapRatio)
+                : col === 'circulatingSupplyPercentage'
+                ? formatPercentage(token.circulatingSupplyPercentage)
+                : col === 'isVolumeHealthy' || col === 'isCirculatingSupplyGood'
+                ? formatBoolean(
+                    typeof token[col as keyof Token] === 'boolean'
+                      ? (token[col as keyof Token] as boolean)
+                      : undefined
+                  )
+                : col === 'potentialMultiplier'
+                ? formatMultiplier(token.potentialMultiplier)
+                : col === 'liquidityScore' || col === 'pumpDumpRiskScore' || col === 'walletDistributionScore'
+                ? formatScore(
+                    typeof token[col as keyof Token] === 'number'
+                      ? (token[col as keyof Token] as number)
+                      : undefined
+                  )
+                : col === 'rank'
+                ? token.rank || '-'
+                : token[col as keyof Token] || '-'}
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="p-4">
+      <div className="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between">
+        <input
+          type="text"
+          placeholder="Search tokens..."
+          value={searchQuery}
+          onChange={handleSearchChange}
+          className="w-full sm:max-w-xs p-2 border border-gray-300 rounded bg-gray-800 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          aria-label="Search tokens"
+        />
+        <div className="mt-2 sm:mt-0 sm:ml-4 flex space-x-2">
+          <select
+            onChange={e => requestSort(e.target.value)}
+            className="p-2 bg-gray-700 text-white rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+            aria-label="Sort tokens by"
+          >
+            <option value="">Sort By</option>
+            <option value="rank">Rank</option>
+            <option value="marketCap">Market Cap</option>
+            <option value="volume24h">Volume 24h</option>
+            <option value="price">Price</option>
+            <option value="liquidityScore">Liquidity Score</option>
+            <option value="pumpDumpRiskScore">Pump/Dump Risk</option>
+            <option value="walletDistributionScore">Wallet Distribution</option>
+          </select>
+          <button
+            onClick={showColumnModal}
+            className="px-4 py-2 bg-gray-700 text-white rounded hover:bg-gray-600 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
+            aria-label="Customize table columns"
+          >
+            Add/Remove Columns
+          </button>
+          <button
+            onClick={onFilterClick}
+            className="px-4 py-2 bg-yellow-500 text-black rounded hover:bg-yellow-400 transition-colors focus:outline-none focus:ring-2 focus:ring-yellow-500"
+            aria-label="Open filter drawer"
+          >
+            Filter
+          </button>
+          <button
+            onClick={showSortModal}
+            className="px-4 py-2 bg-gray-700 text-white rounded hover:bg-gray-600 transition-colors flex items-center focus:outline-none focus:ring-2 focus:ring-blue-500"
+            aria-label="Open sort options"
+          >
+            <FaSort className="mr-1" /> Sort
+          </button>
+        </div>
+      </div>
+      <div className="overflow-x-auto">
+        <div className="min-w-full">
+          <div
+            className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sticky top-0 bg-gray-900 z-10 p-2"
+            role="row"
+            aria-label="Table headers"
+          >
+            {columns.map(col => (
+              <div
+                key={col}
+                className="font-bold text-gray-300 text-sm"
+                role="columnheader"
+                aria-sort={sortConfig?.key === col ? (sortConfig.direction === 'asc' ? 'ascending' : 'descending') : 'none'}
+              >
+                {col.charAt(0).toUpperCase() + col.slice(1).replace(/([A-Z])/g, ' $1')}
+              </div>
+            ))}
+          </div>
+          <div role="grid" aria-label="Token data table">
+            <FixedSizeList
+              height={400}
+              itemCount={sortedTokens.length}
+              itemSize={150}
+              width="100%"
+            >
+              {Row}
+            </FixedSizeList>
+          </div>
+        </div>
+      </div>
+      {isColumnModalVisible && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end justify-center z-50">
+          <div className="bg-gray-800 w-full max-w-md p-4 rounded-t-lg">
+            <h2 className="text-lg font-bold text-white mb-4">Customize Table Columns</h2>
             {[
+              'rank',
               'name',
               'symbol',
               'category',
@@ -408,114 +884,85 @@ export default FilterDrawer;
               'marketCap',
               'volume24h',
               'transferVolume24h',
-              'volatilityScore24h',
+              'fullyDilutedValuation',
+              'volumeMarketCapRatio',
+              'circulatingSupplyPercentage',
+              'isVolumeHealthy',
+              'isCirculatingSupplyGood',
+              'potentialMultiplier',
+              'liquidityScore',
+              'pumpDumpRiskScore',
+              'walletDistributionScore',
             ].map(key => (
-              <button
-                key={key}
-                onClick={() => toggleColumn(key)}
-                className={`px-2 py-1 rounded text-sm ${
-                  visibleColumns.includes(key)
-                    ? 'bg-blue-500 text-white'
-                    : 'bg-gray-200 text-gray-700'
-                }`}
-              >
-                {key
-                  .replace(/([A-Z])/g, ' $1')
-                  .replace(/^./, str => str.toUpperCase())}
-              </button>
+              <div key={key} className="flex items-center mb-2">
+                <input
+                  type="checkbox"
+                  checked={visibleColumns.includes(key)}
+                  onChange={() => toggleColumn(key)}
+                  className="mr-2 h-4 w-4 text-green-500 bg-gray-700 border-gray-600 rounded focus:ring-green-500"
+                  id={`column-${key}`}
+                  aria-label={`Toggle ${key} column`}
+                />
+                <label htmlFor={`column-${key}`} className="text-white">
+                  {key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1')}
+                </label>
+              </div>
             ))}
+            <button
+              onClick={handleColumnClose}
+              className="w-full mt-4 px-4 py-2 bg-green-500 text-white rounded hover:bg-green-400 transition-colors focus:outline-none focus:ring-2 focus:ring-green-500"
+              aria-label="Close column customization"
+            >
+              Done
+            </button>
           </div>
         </div>
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                {columns.map(col => (
-                  <th
-                    key={col}
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                  >
-                    {col}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {filteredTokens.map((token: Token) => (
-                <tr key={token.id}>
-                  {visibleColumns.includes('name') && (
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <span>{token.name}</span>
-                        <span className="ml-2 text-sm text-blue-600">
-                          {token.symbol.toUpperCase()}
-                        </span>
-                      </div>
-                    </td>
-                  )}
-                  {visibleColumns.includes('symbol') && (
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {token.symbol.toUpperCase()}
-                    </td>
-                  )}
-                  {visibleColumns.includes('category') && (
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span
-                        className={`px-2 py-1 rounded text-sm ${
-                          token.category === 'memecoin'
-                            ? 'bg-red-100 text-red-800'
-                            : token.category === 'defi'
-                            ? 'bg-blue-100 text-blue-800'
-                            : token.category === 'bitcoin'
-                            ? 'bg-yellow-100 text-yellow-800'
-                            : 'bg-green-100 text-green-800'
-                        }`}
-                      >
-                        {token.category.toUpperCase()}
-                      </span>
-                    </td>
-                  )}
-                  {visibleColumns.includes('price') && (
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {token.price
-                        ? `$${token.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 6 })}`
-                        : '-'}
-                    </td>
-                  )}
-                  {visibleColumns.includes('marketCap') && (
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {token.marketCap ? `$${token.marketCap.toLocaleString()}` : '-'}
-                    </td>
-                  )}
-                  {visibleColumns.includes('volume24h') && (
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {token.volume24h ? `$${token.volume24h.toLocaleString()}` : '-'}
-                    </td>
-                  )}
-                  {visibleColumns.includes('transferVolume24h') && (
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {token.stats?.transferVolume24h
-                        ? `$${token.stats.transferVolume24h.toLocaleString()}`
-                        : '-'}
-                    </td>
-                  )}
-                  {visibleColumns.includes('volatilityScore24h') && (
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {token.stats?.volatilityScore24h
-                        ? token.stats.volatilityScore24h.toFixed(2)
-                        : '-'}
-                    </td>
-                  )}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      )}
+      {isSortModalVisible && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end justify-center z-50">
+          <div className="bg-gray-800 w-full max-w-md p-4 rounded-t-lg">
+            <h2 className="text-lg font-bold text-white mb-4">Sort By</h2>
+            {[
+              'rank',
+              'price',
+              'marketCap',
+              'volume24h',
+              'transferVolume24h',
+              'fullyDilutedValuation',
+              'volumeMarketCapRatio',
+              'circulatingSupplyPercentage',
+              'potentialMultiplier',
+              'liquidityScore',
+              'pumpDumpRiskScore',
+              'walletDistributionScore',
+            ].map(key => (
+              <div key={key} className="mb-2">
+                <button
+                  onClick={() => requestSort(key)}
+                  className="w-full text-left p-2 bg-gray-700 rounded hover:bg-gray-600 text-white flex justify-between focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  aria-label={`Sort by ${key}`}
+                >
+                  <span>{key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1')}</span>
+                  <span>{sortConfig?.key === key ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}</span>
+                </button>
+              </div>
+            ))}
+            <button
+              onClick={handleSortClose}
+              className="w-full mt-4 px-4 py-2 bg-green-500 text-white rounded hover:bg-green-400 transition-colors focus:outline-none focus:ring-2 focus:ring-green-500"
+              aria-label="Close sort options"
+            >
+              Done
+            </button>
+          </div>
         </div>
-      </div>
-    );
-  });
+      )}
+      <FilterDrawer isOpen={isFilterDrawerOpen} onClose={onFilterClose} />
+    </div>
+  );
+});
 
-  export default TokenTable;
+export default TokenTable;
 === .\components\WelcomeScreen.tsx ===
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
@@ -585,117 +1032,134 @@ const WelcomeScreen: React.FC<{ onFinish: () => void }> = ({ onFinish }) => {
 export default WelcomeScreen;
 === .\hooks\useTokenData.ts ===
 import { useEffect } from 'react';
-import useSWR from 'swr';
-import { useTokenStore } from '../stores/useTokenStore';
+   import useSWR from 'swr';
+   import { useTokenStore } from '../stores/useTokenStore';
 
-interface Token {
-  id: string;
-  name: string;
-  symbol: string;
-  category: string;
-  marketCap?: number;
-  volume24h?: number;
-  price?: number;
-  transferVolume24h?: number;
-  createdAt: string;
-  updatedAt: string;
-  stats?: {
-    priceChange24h: number;
-    volatilityScore24h: number;
-    liquidityScore: number;
-    transferVolume24h: number;
-  };
-}
+   interface Token {
+     id: string;
+     name: string;
+     symbol: string;
+     category: string;
+     price?: number;
+     marketCap?: number;
+     volume24h?: number;
+     transferVolume24h?: number;
+     createdAt: string;
+     updatedAt: string;
+     volatilityScore24h?: number;
+     fullyDilutedValuation?: number;
+     volumeMarketCapRatio?: number;
+     circulatingSupplyPercentage?: number;
+     isVolumeHealthy?: boolean;
+     isCirculatingSupplyGood?: boolean;
+     potentialMultiplier?: number;
+   }
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000';
-const API_KEY = process.env.NEXT_PUBLIC_API_KEY;
+   const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001';
+   const API_KEY = process.env.NEXT_PUBLIC_API_KEY;
 
-const fetcher = async (url: string) => {
-  const headers: HeadersInit = {};
-  if (API_KEY) {
-    headers['Authorization'] = `Bearer ${API_KEY}`;
-  }
-  const res = await fetch(url, { headers });
-  if (!res.ok) {
-    throw new Error(`Failed to fetch: ${res.statusText}`);
-  }
-  return res.json();
-};
+   const fetcher = async (url: string) => {
+     const headers: HeadersInit = {};
+     if (API_KEY) {
+       headers['Authorization'] = `Bearer ${API_KEY}`;
+     }
+     const res = await fetch(url, { headers });
+     if (!res.ok) {
+       throw new Error(`Failed to fetch: ${res.statusText}`);
+     }
+     const data = await res.json();
+     return Array.isArray(data) ? data : [data];
+   };
 
-export function useTokenData() {
-  const { setTokens, setFilteredTokens, setLoading, setError, fetchTokens } = useTokenStore();
+   export function useTokenData() {
+     const { setTokens, setFilteredTokens, setLoading, setError, fetchTokens } = useTokenStore();
 
-  const { data, error, isLoading } = useSWR<Token[]>(`${API_BASE_URL}/tokens`, fetcher, {
-    revalidateOnFocus: false,
-    revalidateOnReconnect: false,
-  });
+     const { data, error, isLoading } = useSWR<Token[]>(`${API_BASE_URL}/tokens`, fetcher, {
+       revalidateOnFocus: false,
+       revalidateOnReconnect: false,
+     });
 
-  useEffect(() => {
-    setLoading(isLoading);
-    if (error) {
-      setError(error.message || 'An unknown error occurred');
-    } else if (data) {
-      setTokens(data);
-      setFilteredTokens(data);
-      setError(null);
-    }
-  }, [data, error, isLoading, setTokens, setFilteredTokens, setLoading, setError]);
+     useEffect(() => {
+       setLoading(isLoading);
+       if (error) {
+         setError(error.message || 'An unknown error occurred');
+       } else if (data) {
+         setTokens(data);
+         setFilteredTokens(data);
+         setError(null);
+       }
+     }, [data, error, isLoading, setTokens, setFilteredTokens, setLoading, setError]);
 
-  return { fetchTokens }; // Expose fetchTokens for manual triggering if needed
-}
+     return { fetchTokens };
+   }
 === .\pages\charts.tsx ===
-
 import React from 'react';
-import { Layout, Typography } from 'antd';
 import BottomNav from '../components/BottomNav';
-
-const { Header, Content } = Layout;
-const { Title } = Typography;
 
 export default function Charts() {
   return (
-    <Layout style={{ minHeight: '100vh' }}>
-      <Header style={{ background: '#001529', padding: '0 16px' }}>
-        <Title level={3} style={{ color: 'white', margin: '16px 0' }}>
-          Charts
-        </Title>
-      </Header>
-      <Content style={{ padding: '16px', paddingBottom: '60px' }}>
-        <div>Charts Page - Coming Soon</div>
-      </Content>
+    <div className="min-h-screen flex flex-col pb-16 bg-gray-900 text-white">
+      <header className="bg-gray-800 p-4">
+        <h1 className="text-xl font-bold text-white">Charts</h1>
+      </header>
+      <main className="flex-1 p-4">
+        <div className="text-gray-300">Charts Page - Coming Soon</div>
+      </main>
       <BottomNav onFilterClick={() => {}} />
-    </Layout>
+    </div>
   );
 }
-
 === .\pages\index.tsx ===
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import BottomNav from '../components/BottomNav';
 import TokenTable from '../components/TokenTable';
 import { useTokenStore } from '../stores/useTokenStore';
 import { useTokenData } from '../hooks/useTokenData';
+import TabbedFilters from '../components/TabbedFilters';
 
 export default function Home() {
   const { loading, error } = useTokenStore();
   const { fetchTokens } = useTokenData();
+  const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
 
   useEffect(() => {
     fetchTokens();
   }, [fetchTokens]);
 
+  const handleFilterClick = () => {
+    setIsFilterDrawerOpen(true);
+  };
+
+  const handleFilterClose = () => {
+    setIsFilterDrawerOpen(false);
+  };
+
   return (
-    <div className="min-h-screen flex flex-col pb-16">
+    <div className="min-h-screen flex flex-col pb-safe-area-inset-bottom bg-gray-900 text-white">
       <main className="flex-1 p-4">
-        <h1 className="text-2xl font-bold mb-4">Token Analytics</h1>
-        {loading && <p className="text-center text-gray-500">Loading tokens...</p>}
+        <div className="flex justify-between items-center mb-4">
+          <h1 className="text-2xl font-bold">Market</h1>
+          <div className="text-sm text-gray-400">Portfolio</div>
+        </div>
+        <TabbedFilters />
+        {loading && <p className="text-center text-gray-400">Loading tokens...</p>}
         {error && (
           <p className="text-center text-red-500">
-            Error: {error} <button onClick={fetchTokens} className="text-blue-500 underline">Retry</button>
+            Error: {error}{' '}
+            <button onClick={fetchTokens} className="text-blue-500 underline">
+              Retry
+            </button>
           </p>
         )}
-        {!loading && !error && <TokenTable />}
+        {!loading && !error && (
+          <TokenTable
+            isFilterDrawerOpen={isFilterDrawerOpen}
+            onFilterClick={handleFilterClick}
+            onFilterClose={handleFilterClose}
+          />
+        )}
       </main>
-      <BottomNav />
+      <BottomNav onFilterClick={handleFilterClick} />
     </div>
   );
 }
@@ -816,16 +1280,69 @@ import '../styles/globals.css';
 import type { AppProps } from 'next/app';
 import { inter, robotoMono } from '../utils/fonts';
 import Head from 'next/head';
+import { useState, useEffect } from 'react';
+import WelcomeScreen from '../components/WelcomeScreen';
 
 export default function App({ Component, pageProps }: AppProps) {
+  const [showWelcome, setShowWelcome] = useState(true);
+  const INACTIVITY_THRESHOLD = 10 * 60 * 1000; // 10 minutes in milliseconds
+
+  useEffect(() => {
+    const lastActive = localStorage.getItem('lastActive');
+    const now = new Date().getTime();
+
+    if (lastActive) {
+      const lastActiveTime = parseInt(lastActive, 10);
+      const timeSinceLastActive = now - lastActiveTime;
+
+      // Show welcome screen if inactive for more than INACTIVITY_THRESHOLD
+      if (timeSinceLastActive > INACTIVITY_THRESHOLD) {
+        setShowWelcome(true);
+      } else {
+        setShowWelcome(false);
+      }
+    } else {
+      // First visit or no stored timestamp
+      localStorage.setItem('lastActive', now.toString());
+      setShowWelcome(true);
+    }
+
+    // Update last active timestamp when the app is interacted with
+    const handleActivity = () => {
+      localStorage.setItem('lastActive', now.toString());
+    };
+
+    window.addEventListener('mousemove', handleActivity);
+    window.addEventListener('keydown', handleActivity);
+    window.addEventListener('scroll', handleActivity);
+
+    return () => {
+      window.removeEventListener('mousemove', handleActivity);
+      window.removeEventListener('keydown', handleActivity);
+      window.removeEventListener('scroll', handleActivity);
+    };
+  }, []);
+
+  const handleWelcomeFinish = () => {
+    setShowWelcome(false);
+  };
+
   return (
     <div className={`${inter.variable} ${robotoMono.variable}`}>
       <Head>
         <title>Sunnalytics</title>
         <meta name="description" content="Sunnalytics - Token Analytics Platform" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <link rel="icon" href="/favicon.ico" />
+        <meta name="theme-color" content="#111827" />
+        <link rel="icon" href="/favicon.ico" sizes="any" />
+        <link rel="icon" type="image/png" href="/favicon-16x16.png" sizes="16x16" />
+        <link rel="icon" type="image/png" href="/favicon-32x32.png" sizes="32x32" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+        <link rel="icon" type="image/png" href="/android-chrome-192x192.png" sizes="192x192" />
+        <link rel="icon" type="image/png" href="/android-chrome-512x512.png" sizes="512x512" />
+        <link rel="manifest" href="/site.webmanifest" />
       </Head>
+      {showWelcome && <WelcomeScreen onFinish={handleWelcomeFinish} />}
       <Component {...pageProps} />
     </div>
   );
@@ -836,7 +1353,6 @@ import localforage from 'localforage';
 import { persist, createJSONStorage } from 'zustand/middleware';
 
 interface Token {
-  id: string;
   name: string;
   symbol: string;
   category: string;
@@ -844,13 +1360,20 @@ interface Token {
   volume24h?: number;
   price?: number;
   transferVolume24h?: number;
-  createdAt: string;
-  updatedAt: string;
+  fullyDilutedValuation?: number;
+  volumeMarketCapRatio?: number;
+  circulatingSupplyPercentage?: number;
+  isVolumeHealthy?: boolean;
+  isCirculatingSupplyGood?: boolean;
+  potentialMultiplier?: number;
+  rank?: number;
+  liquidityScore?: number;
+  pumpDumpRiskScore?: number;
+  walletDistributionScore?: number;
   stats?: {
-    priceChange24h: number;
-    volatilityScore24h: number;
-    liquidityScore: number;
-    transferVolume24h: number;
+    priceChange24h?: number;
+    volatilityScore24h?: number;
+    liquidityScore?: number;
   };
 }
 
@@ -925,7 +1448,7 @@ a {
 === .\utils\api.ts ===
 import useSWR from 'swr';
 
-const API_BASE_URL = 'http://localhost:3001';
+const API_BASE_URL = 'https://sunnalytics-backend.onrender.com';
 
 const fetcher = async (url: string) => {
   const res = await fetch(url);
