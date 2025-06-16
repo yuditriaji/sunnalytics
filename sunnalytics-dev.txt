@@ -616,22 +616,14 @@ const TokenTable: React.FC<TokenTableProps> = memo(({ isFilterDrawerOpen, onFilt
   const { filteredTokens, setFilteredTokens, tokens } = useTokenStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [visibleColumns, setVisibleColumns] = useState<string[]>([
-    'rank',
-    'name',
     'symbol',
-    'category',
     'price',
-    'marketCap',
     'volume24h',
-    'transferVolume24h',
-    'fullyDilutedValuation',
+    'marketCap',
     'volumeMarketCapRatio',
-    'circulatingSupplyPercentage',
     'isVolumeHealthy',
-    'isCirculatingSupplyGood',
-    'potentialMultiplier',
-    'liquidityScore',
     'pumpDumpRiskScore',
+    'liquidityScore',
     'walletDistributionScore',
   ]);
   const [isColumnModalVisible, setIsColumnModalVisible] = useState(false);
@@ -703,22 +695,14 @@ const TokenTable: React.FC<TokenTableProps> = memo(({ isFilterDrawerOpen, onFilt
   }, [filteredTokens, sortConfig]);
 
   const columns = [
-    'rank',
-    'name',
     'symbol',
-    'category',
     'price',
-    'marketCap',
     'volume24h',
-    'transferVolume24h',
-    'fullyDilutedValuation',
+    'marketCap',
     'volumeMarketCapRatio',
-    'circulatingSupplyPercentage',
     'isVolumeHealthy',
-    'isCirculatingSupplyGood',
-    'potentialMultiplier',
-    'liquidityScore',
     'pumpDumpRiskScore',
+    'liquidityScore',
     'walletDistributionScore',
   ].filter(col => visibleColumns.includes(col));
 
@@ -730,9 +714,7 @@ const TokenTable: React.FC<TokenTableProps> = memo(({ isFilterDrawerOpen, onFilt
   };
 
   const formatRatio = (value: number | undefined) => value !== undefined ? `${(value * 100).toFixed(2)}%` : '-';
-  const formatPercentage = (value: number | undefined) => value !== undefined ? `${value.toFixed(2)}%` : '-';
   const formatBoolean = (value: boolean | undefined) => value !== undefined ? (value ? 'Yes' : 'No') : '-';
-  const formatMultiplier = (value: number | undefined) => value !== undefined ? value.toFixed(2) : '-';
   const formatScore = (value: number | undefined) => value !== undefined ? value.toFixed(2) : '-';
 
   const Row = ({ index, style }: { index: number; style: React.CSSProperties }) => {
@@ -740,54 +722,37 @@ const TokenTable: React.FC<TokenTableProps> = memo(({ isFilterDrawerOpen, onFilt
     return (
       <div
         style={style}
-        className="bg-gray-800 p-4 rounded shadow flex flex-col space-y-2"
+        className="bg-gray-800 p-2 flex items-center space-x-4 text-white rounded shadow-sm hover:bg-gray-700 transition-colors"
         role="row"
-        aria-label={`Token ${token.name}`}
+        aria-label={`Token ${token.symbol}`}
       >
-        <div className="flex items-center space-x-2">
-          <span className="font-bold text-white">{token.name}</span>
-          <span className="text-gray-400">({token.category})</span>
-        </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2" role="rowgroup">
-          {columns.map(col => (
-            <div key={col} className="text-sm" role="cell">
-              <span className="font-medium text-gray-300">
-                {col.charAt(0).toUpperCase() + col.slice(1).replace(/([A-Z])/g, ' $1')}:
-              </span>{' '}
-              {col === 'price' || col === 'marketCap' || col === 'volume24h' || col === 'fullyDilutedValuation'
-                ? formatNumber(
-                    typeof token[col as keyof Token] === 'number'
-                      ? (token[col as keyof Token] as number)
-                      : undefined
-                  )
-                : col === 'transferVolume24h'
-                ? token.transferVolume24h
-                  ? `$${token.transferVolume24h.toLocaleString()}`
-                  : '-'
-                : col === 'volumeMarketCapRatio'
-                ? formatRatio(token.volumeMarketCapRatio)
-                : col === 'circulatingSupplyPercentage'
-                ? formatPercentage(token.circulatingSupplyPercentage)
-                : col === 'isVolumeHealthy' || col === 'isCirculatingSupplyGood'
-                ? formatBoolean(
-                    typeof token[col as keyof Token] === 'boolean'
-                      ? (token[col as keyof Token] as boolean)
-                      : undefined
-                  )
-                : col === 'potentialMultiplier'
-                ? formatMultiplier(token.potentialMultiplier)
-                : col === 'liquidityScore' || col === 'pumpDumpRiskScore' || col === 'walletDistributionScore'
-                ? formatScore(
-                    typeof token[col as keyof Token] === 'number'
-                      ? (token[col as keyof Token] as number)
-                      : undefined
-                  )
-                : col === 'rank'
-                ? token.rank || '-'
-                : token[col as keyof Token] || '-'}
-            </div>
-          ))}
-        </div>
+        {columns.map(col => (
+          <div key={col} className="flex-1 text-sm truncate" role="cell">
+            {col === 'symbol' ? (
+              <span>{token.symbol}</span>
+            ) : col === 'price' ? (
+              <button className="bg-green-500 text-black px-2 py-1 rounded hover:bg-green-400 transition-colors">
+                Buy ${formatNumber(token.price)}
+              </button>
+            ) : col === 'volume24h' ? (
+              formatNumber(token.volume24h)
+            ) : col === 'marketCap' ? (
+              formatNumber(token.marketCap)
+            ) : col === 'volumeMarketCapRatio' ? (
+              formatRatio(token.volumeMarketCapRatio)
+            ) : col === 'isVolumeHealthy' ? (
+              formatBoolean(token.isVolumeHealthy)
+            ) : col === 'pumpDumpRiskScore' ? (
+              formatScore(token.pumpDumpRiskScore)
+            ) : col === 'liquidityScore' ? (
+              formatScore(token.liquidityScore)
+            ) : col === 'walletDistributionScore' ? (
+              formatScore(token.walletDistributionScore)
+            ) : (
+              '-'
+            )}
+          </div>
+        ))}
       </div>
     );
   };
@@ -800,7 +765,7 @@ const TokenTable: React.FC<TokenTableProps> = memo(({ isFilterDrawerOpen, onFilt
           placeholder="Search tokens..."
           value={searchQuery}
           onChange={handleSearchChange}
-          className="w-full sm:max-w-xs p-2 border border-gray-300 rounded bg-gray-800 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full sm:max-w-xs p-2 border border-gray-600 rounded bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
           aria-label="Search tokens"
         />
         <div className="mt-2 sm:mt-0 sm:ml-4 flex space-x-2">
@@ -810,13 +775,12 @@ const TokenTable: React.FC<TokenTableProps> = memo(({ isFilterDrawerOpen, onFilt
             aria-label="Sort tokens by"
           >
             <option value="">Sort By</option>
-            <option value="rank">Rank</option>
             <option value="marketCap">Market Cap</option>
             <option value="volume24h">Volume 24h</option>
             <option value="price">Price</option>
             <option value="liquidityScore">Liquidity Score</option>
             <option value="pumpDumpRiskScore">Pump/Dump Risk</option>
-            <option value="walletDistributionScore">Wallet Distribution</option>
+            <option value="walletDistributionScore">Wallet Dist Score</option>
           </select>
           <button
             onClick={showColumnModal}
@@ -844,18 +808,23 @@ const TokenTable: React.FC<TokenTableProps> = memo(({ isFilterDrawerOpen, onFilt
       <div className="overflow-x-auto">
         <div className="min-w-full">
           <div
-            className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sticky top-0 bg-gray-900 z-10 p-2"
+            className="grid grid-cols-[minmax(80px,1fr)_minmax(100px,1fr)_minmax(100px,1fr)_minmax(100px,1fr)_minmax(120px,1fr)_minmax(100px,1fr)_minmax(120px,1fr)_minmax(120px,1fr)_minmax(120px,1fr)] gap-2 sticky top-0 bg-gray-900 z-10 p-2 text-white font-bold"
             role="row"
             aria-label="Table headers"
           >
             {columns.map(col => (
               <div
                 key={col}
-                className="font-bold text-gray-300 text-sm"
+                className="text-sm truncate"
                 role="columnheader"
                 aria-sort={sortConfig?.key === col ? (sortConfig.direction === 'asc' ? 'ascending' : 'descending') : 'none'}
               >
-                {col.charAt(0).toUpperCase() + col.slice(1).replace(/([A-Z])/g, ' $1')}
+                {col === 'symbol' ? 'Symbol' : 
+                 col === 'volumeMarketCapRatio' ? 'Vol/Mkt Cap Ratio' : 
+                 col === 'isVolumeHealthy' ? 'Health' : 
+                 col === 'pumpDumpRiskScore' ? 'Pump/Dump Risk' : 
+                 col === 'walletDistributionScore' ? 'Wallet Dist Score' : 
+                 col.charAt(0).toUpperCase() + col.slice(1).replace(/([A-Z])/g, ' $1')}
               </div>
             ))}
           </div>
@@ -863,7 +832,7 @@ const TokenTable: React.FC<TokenTableProps> = memo(({ isFilterDrawerOpen, onFilt
             <FixedSizeList
               height={400}
               itemCount={sortedTokens.length}
-              itemSize={150}
+              itemSize={50}
               width="100%"
             >
               {Row}
@@ -876,22 +845,14 @@ const TokenTable: React.FC<TokenTableProps> = memo(({ isFilterDrawerOpen, onFilt
           <div className="bg-gray-800 w-full max-w-md p-4 rounded-t-lg">
             <h2 className="text-lg font-bold text-white mb-4">Customize Table Columns</h2>
             {[
-              'rank',
-              'name',
               'symbol',
-              'category',
               'price',
-              'marketCap',
               'volume24h',
-              'transferVolume24h',
-              'fullyDilutedValuation',
+              'marketCap',
               'volumeMarketCapRatio',
-              'circulatingSupplyPercentage',
               'isVolumeHealthy',
-              'isCirculatingSupplyGood',
-              'potentialMultiplier',
-              'liquidityScore',
               'pumpDumpRiskScore',
+              'liquidityScore',
               'walletDistributionScore',
             ].map(key => (
               <div key={key} className="flex items-center mb-2">
@@ -904,7 +865,12 @@ const TokenTable: React.FC<TokenTableProps> = memo(({ isFilterDrawerOpen, onFilt
                   aria-label={`Toggle ${key} column`}
                 />
                 <label htmlFor={`column-${key}`} className="text-white">
-                  {key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1')}
+                  {key === 'symbol' ? 'Symbol' : 
+                   key === 'volumeMarketCapRatio' ? 'Vol/Mkt Cap Ratio' : 
+                   key === 'isVolumeHealthy' ? 'Health' : 
+                   key === 'pumpDumpRiskScore' ? 'Pump/Dump Risk' : 
+                   key === 'walletDistributionScore' ? 'Wallet Dist Score' : 
+                   key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1')}
                 </label>
               </div>
             ))}
@@ -923,17 +889,12 @@ const TokenTable: React.FC<TokenTableProps> = memo(({ isFilterDrawerOpen, onFilt
           <div className="bg-gray-800 w-full max-w-md p-4 rounded-t-lg">
             <h2 className="text-lg font-bold text-white mb-4">Sort By</h2>
             {[
-              'rank',
               'price',
               'marketCap',
               'volume24h',
-              'transferVolume24h',
-              'fullyDilutedValuation',
               'volumeMarketCapRatio',
-              'circulatingSupplyPercentage',
-              'potentialMultiplier',
-              'liquidityScore',
               'pumpDumpRiskScore',
+              'liquidityScore',
               'walletDistributionScore',
             ].map(key => (
               <div key={key} className="mb-2">
@@ -942,7 +903,11 @@ const TokenTable: React.FC<TokenTableProps> = memo(({ isFilterDrawerOpen, onFilt
                   className="w-full text-left p-2 bg-gray-700 rounded hover:bg-gray-600 text-white flex justify-between focus:outline-none focus:ring-2 focus:ring-blue-500"
                   aria-label={`Sort by ${key}`}
                 >
-                  <span>{key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1')}</span>
+                  <span>{key === 'volumeMarketCapRatio' ? 'Vol/Mkt Cap Ratio' : 
+                         key === 'isVolumeHealthy' ? 'Health' : 
+                         key === 'pumpDumpRiskScore' ? 'Pump/Dump Risk' : 
+                         key === 'walletDistributionScore' ? 'Wallet Dist Score' : 
+                         key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1')}</span>
                   <span>{sortConfig?.key === key ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}</span>
                 </button>
               </div>

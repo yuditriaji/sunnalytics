@@ -3,6 +3,7 @@ import localforage from 'localforage';
 import { persist, createJSONStorage } from 'zustand/middleware';
 
 interface Token {
+  id: string; // Added id
   name: string;
   symbol: string;
   category: string;
@@ -36,7 +37,7 @@ interface TokenState {
   setFilteredTokens: (tokens: Token[]) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
-  fetchTokens: () => void; // Kept for manual triggering if needed
+  fetchTokens: () => void;
 }
 
 export const useTokenStore = create<TokenState>()(
@@ -50,7 +51,7 @@ export const useTokenStore = create<TokenState>()(
       setFilteredTokens: (tokens: Token[]) => set({ filteredTokens: tokens }),
       setLoading: (loading: boolean) => set({ loading }),
       setError: (error: string | null) => set({ error }),
-      fetchTokens: () => {}, // Placeholder, will be triggered by useTokenData
+      fetchTokens: () => {},
     }),
     {
       name: 'token-store',

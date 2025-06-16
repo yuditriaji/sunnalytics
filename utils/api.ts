@@ -1,6 +1,6 @@
 import useSWR from 'swr';
 
-const API_BASE_URL = 'https://sunnalytics-backend.onrender.com';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001';
 
 const fetcher = async (url: string) => {
   const res = await fetch(url);
@@ -13,17 +13,17 @@ const fetcher = async (url: string) => {
 
 export function useTokens(category?: string) {
   const url = category
-    ? `${API_BASE_URL}/tokens?category=${category}`
-    : `${API_BASE_URL}/tokens`;
+    ? `${API_BASE_URL}/api/tokens?category=${category}`
+    : `${API_BASE_URL}/api/tokens`;
   const { data, error, isLoading } = useSWR(url, fetcher, {
-    refreshInterval: 60000, // Refresh every minute
+    refreshInterval: 60000,
     revalidateOnFocus: false,
   });
   return { tokens: data, error, isLoading };
 }
 
 export async function refreshTokens() {
-  const res = await fetch(`${API_BASE_URL}/tokens/refresh`, { method: 'POST' });
+  const res = await fetch(`${API_BASE_URL}/api/tokens/refresh`, { method: 'POST' });
   if (!res.ok) {
     throw new Error('Failed to refresh tokens');
   }
