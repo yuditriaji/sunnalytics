@@ -1,14 +1,17 @@
+// pages/index.tsx
 import { useEffect, useState } from 'react';
 import BottomNav from '../components/BottomNav';
 import TokenTable from '../components/TokenTable';
 import { useTokenStore } from '../stores/useTokenStore';
 import { useTokenData } from '../hooks/useTokenData';
-import TabbedFilters from '../components/TabbedFilters';
+import useMediaQuery from 'react-responsive';
 
 export default function Home() {
   const { loading, error } = useTokenStore();
   const { fetchTokens } = useTokenData();
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
+  const isMobileQuery = useMediaQuery({ query: '(max-width: 640px)' }) as boolean | null;
+  const isMobile: boolean = isMobileQuery !== null ? isMobileQuery : false;
 
   useEffect(() => {
     fetchTokens();
@@ -27,9 +30,8 @@ export default function Home() {
       <main className="flex-1 p-4">
         <div className="flex justify-between items-center mb-4">
           <h1 className="text-2xl font-bold">Market</h1>
-          <div className="text-sm text-gray-400">Portfolio</div>
+          <div className="text-sm text-gray-400">Watchlist</div>
         </div>
-        <TabbedFilters />
         {loading && <p className="text-center text-gray-400">Loading tokens...</p>}
         {error && (
           <p className="text-center text-red-500">
@@ -44,10 +46,11 @@ export default function Home() {
             isFilterDrawerOpen={isFilterDrawerOpen}
             onFilterClick={handleFilterClick}
             onFilterClose={handleFilterClose}
+            defaultMobileColumns={isMobile}
           />
         )}
       </main>
-      <BottomNav onFilterClick={handleFilterClick} />
+      <BottomNav onFilterClick={handleFilterClick} onSearchFocus={() => document.querySelector('input')?.focus()} />
     </div>
   );
 }

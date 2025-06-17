@@ -1,12 +1,12 @@
-import React, { useState, useMemo, memo, useCallback } from 'react';
+// components/TokenTable.tsx
+import React, { useState, useEffect, useMemo, memo, useCallback } from 'react';
 import { useRouter } from 'next/router';
 import { useTokenStore } from '../stores/useTokenStore';
 import FilterDrawer from './FilterDrawer';
-import { FaSort } from 'react-icons/fa';
+import { FaSort, FaStar } from 'react-icons/fa';
 import { FixedSizeList } from 'react-window';
 import debounce from 'lodash.debounce';
 
-// Define Token interface locally to ensure id is included
 interface Token {
   id: string;
   name: string;
@@ -32,6 +32,7 @@ interface TokenTableProps {
   isFilterDrawerOpen: boolean;
   onFilterClick: () => void;
   onFilterClose: () => void;
+  defaultMobileColumns: boolean;
 }
 
 export function formatNumber(value: number | undefined, suffix: string = ''): string {
@@ -41,9 +42,9 @@ export function formatNumber(value: number | undefined, suffix: string = ''): st
   return `$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 6 })}`;
 }
 
-const TokenTable: React.FC<TokenTableProps> = memo(({ isFilterDrawerOpen, onFilterClick, onFilterClose }) => {
+const TokenTable: React.FC<TokenTableProps> = memo(({ isFilterDrawerOpen, onFilterClick, onFilterClose, defaultMobileColumns }) => {
   const router = useRouter();
-  const { filteredTokens, setFilteredTokens, tokens } = useTokenStore();
+  const { filteredTokens, setFilteredTokens, tokens, watchlist, addToWatchlist } = useTokenStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [visibleColumns, setVisibleColumns] = useState<string[]>([
     'symbol',
@@ -56,9 +57,28 @@ const TokenTable: React.FC<TokenTableProps> = memo(({ isFilterDrawerOpen, onFilt
     'liquidityScore',
     'walletDistributionScore',
   ]);
+
   const [isColumnModalVisible, setIsColumnModalVisible] = useState(false);
   const [isSortModalVisible, setIsSortModalVisible] = useState(false);
   const [sortConfig, setSortConfig] = useState<{ key: keyof Token; direction: 'asc' | 'desc' } | null>(null);
+
+  useEffect(() => {
+    if (defaultMobileColumns) {
+      setVisibleColumns(['symbol', 'volumeMarketCapRatio', 'isVolumeHealthy']);
+    } else {
+      setVisibleColumns([
+        'symbol',
+        'price',
+        'volume24h',
+        'marketCap',
+        'volumeMarketCapRatio',
+        'isVolumeHealthy',
+        'pumpDumpRiskScore',
+        'liquidityScore',
+        'walletDistributionScore',
+      ]);
+    }
+  }, [defaultMobileColumns]);
 
   const toggleColumn = (key: string) => {
     setVisibleColumns(prev =>
@@ -111,7 +131,6 @@ const TokenTable: React.FC<TokenTableProps> = memo(({ isFilterDrawerOpen, onFilt
     handleSortClose();
   };
 
-  // Explicitly type sortedTokens as Token[]
   const sortedTokens: Token[] = useMemo(() => {
     if (!sortConfig) return filteredTokens as Token[];
     return [...filteredTokens].sort((a: Token, b: Token) => {
@@ -153,10 +172,18 @@ const TokenTable: React.FC<TokenTableProps> = memo(({ isFilterDrawerOpen, onFilt
 
   const Row = ({ index, style }: { index: number; style: React.CSSProperties }) => {
     const token: Token = sortedTokens[index];
+    const isInWatchlist = watchlist.some(w => w.id === token.id);
+
+    const handleAddToWatchlist = () => {
+      if (!isInWatchlist) {
+        addToWatchlist(token);
+      }
+    };
+
     return (
       <div
         style={style}
-        className="bg-gray-800 p-2 flex items-center space-x-4 text-white rounded shadow-sm hover:bg-gray-700 transition-colors cursor-pointer"
+        className="bg-gray-800 p-2 flex items-center space-x-2 text-white rounded shadow-sm hover:bg-gray-700 transition-colors cursor-pointer"
         role="row"
         aria-label={`Token ${token.symbol}`}
         onClick={() => router.push(`/tokens/${token.id}`)}
@@ -188,6 +215,13 @@ const TokenTable: React.FC<TokenTableProps> = memo(({ isFilterDrawerOpen, onFilt
             )}
           </div>
         ))}
+        <button
+          onClick={(e) => { e.stopPropagation(); handleAddToWatchlist(); }}
+          className={`p-1 rounded-full ${isInWatchlist ? 'text-yellow-500' : 'text-gray-400 hover:text-yellow-500'} transition-colors`}
+          aria-label={isInWatchlist ? 'Remove from watchlist' : 'Add to watchlist'}
+        >
+          <FaStar />
+        </button>
       </div>
     );
   };
@@ -243,7 +277,10 @@ const TokenTable: React.FC<TokenTableProps> = memo(({ isFilterDrawerOpen, onFilt
       <div className="overflow-x-auto rounded-lg shadow-lg">
         <div className="min-w-full">
           <div
-            className="grid grid-cols-[minmax(80px,1fr)_minmax(100px,1fr)_minmax(100px,1fr)_minmax(100px,1fr)_minmax(120px,1fr)_minmax(100px,1fr)_minmax(120px,1fr)_minmax(120px,1fr)_minmax(120px,1fr)] gap-2 sticky top-0 bg-gray-800 z-10 p-2 text-white font-bold border-b border-gray-700"
+            className={`grid gap-2 sticky top-0 bg-gray-800 z-10 p-2 text-white font-bold border-b border-gray-700`}
+            style={{
+              gridTemplateColumns: columns.map(() => defaultMobileColumns ? '1fr' : 'minmax(80px, 1fr)').join(' '),
+            }}
             role="row"
             aria-label="Table headers"
           >
