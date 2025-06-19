@@ -27,6 +27,13 @@ interface Token {
   walletDistributionScore?: number;
 }
 
+export const formatNumber = (value: number | undefined, suffix: string = ''): string => {
+  if (value === undefined || value === 0) return '-';
+  if (value >= 1e9) return `$${Math.floor(value / 1e9)}${suffix}B`;
+  if (value >= 1e6) return `$${Math.floor(value / 1e6)}${suffix}M`;
+  return `$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 6 })}`;
+};
+
 interface TokenTableProps {
   isFilterDrawerOpen: boolean;
   onFilterClick: () => void;
