@@ -1,4 +1,3 @@
-// stores/useTokenStore.ts
 import { create } from 'zustand';
 import localforage from 'localforage';
 import { persist, createJSONStorage } from 'zustand/middleware';
@@ -29,16 +28,38 @@ interface Token {
   };
 }
 
+interface FilterState {
+  category: string;
+  minPrice: string;
+  maxPrice: string;
+  minVolumeMarketCapRatio: string;
+  maxVolumeMarketCapRatio: string;
+  minCirculatingSupplyPercentage: string;
+  maxCirculatingSupplyPercentage: string;
+  isVolumeHealthy: string;
+  isCirculatingSupplyGood: string;
+}
+
 interface TokenState {
   tokens: Token[];
   filteredTokens: Token[];
   watchlist: Token[];
   loading: boolean;
   error: string | null;
+  searchQuery: string;
+  sortConfig: { key: keyof Token; direction: 'asc' | 'desc' } | null;
+  filters: FilterState;
+  activeTab: string;
+  visibleColumns: string[];
   setTokens: (tokens: Token[]) => void;
   setFilteredTokens: (tokens: Token[]) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
+  setSearchQuery: (query: string) => void;
+  setSortConfig: (config: { key: keyof Token; direction: 'asc' | 'desc' } | null) => void;
+  setFilters: (filters: Partial<FilterState>) => void;
+  setActiveTab: (tab: string) => void;
+  setVisibleColumns: (columns: string[]) => void;
   fetchTokens: () => void;
   addToWatchlist: (token: Token) => void;
 }
@@ -51,18 +72,47 @@ export const useTokenStore = create<TokenState>()(
       watchlist: [],
       loading: false,
       error: null,
+      searchQuery: '',
+      sortConfig: null,
+      filters: {
+        category: '',
+        minPrice: '',
+        maxPrice: '',
+        minVolumeMarketCapRatio: '',
+        maxVolumeMarketCapRatio: '',
+        minCirculatingSupplyPercentage: '',
+        maxCirculatingSupplyPercentage: '',
+        isVolumeHealthy: '',
+        isCirculatingSupplyGood: '',
+      },
+      activeTab: 'all',
+      visibleColumns: [
+        'symbol',
+        'price',
+        'volume24h',
+        'marketCap',
+        'volumeMarketCapRatio',
+        'isVolumeHealthy',
+        'pumpDumpRiskScore',
+        'liquidityScore',
+        'walletDistributionScore',
+      ],
       setTokens: (tokens: Token[]) => set({ tokens }),
       setFilteredTokens: (tokens: Token[]) => set({ filteredTokens: tokens }),
       setLoading: (loading: boolean) => set({ loading }),
       setError: (error: string | null) => set({ error }),
+      setSearchQuery: (query: string) => set({ searchQuery: query }),
+      setSortConfig: (config: { key: keyof Token; direction: 'asc' | 'desc' } | null) => set({ sortConfig: config }),
+      setFilters: (filters: Partial<FilterState>) =>
+        set(state => ({ filters: { ...state.filters, ...filters } })),
+      setActiveTab: (tab: string) => set({ activeTab: tab }),
+      setVisibleColumns: (columns: string[]) => set({ visibleColumns: columns }),
       fetchTokens: async () => {
         set({ loading: true, error: null });
         try {
-          // Replace with your actual backend API endpoint
           const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/tokens`, {
             method: 'GET',
             headers: {
-              // Add authentication headers if required (e.g., Authorization: `Bearer ${yourToken}`)
               'Content-Type': 'application/json',
             },
           });
@@ -72,9 +122,8 @@ export const useTokenStore = create<TokenState>()(
           }
 
           const data = await response.json();
-          // Map the backend response to the Token interface
           const tokens: Token[] = data.map((item: any) => ({
-            id: item.id || item._id, // Adjust based on your backend's ID field
+            id: item.id || item._id,
             name: item.name,
             symbol: item.symbol,
             category: item.category || 'Unknown',
@@ -84,7 +133,6 @@ export const useTokenStore = create<TokenState>()(
             volumeMarketCapRatio: item.volumeMarketCapRatio,
             isVolumeHealthy: item.isVolumeHealthy,
             liquidityScore: item.liquidityScore,
-            // Add other fields as needed based on your backend response
           }));
 
           set({ tokens, filteredTokens: tokens, loading: false });
@@ -92,9 +140,12 @@ export const useTokenStore = create<TokenState>()(
           set({ error: err instanceof Error ? err.message : 'Failed to fetch tokens', loading: false });
         }
       },
-      addToWatchlist: (token: Token) => set((state) => ({
-        watchlist: state.watchlist.some((w: Token) => w.id === token.id) ? state.watchlist : [...state.watchlist, token],
-      })),
+      addToWatchlist: (token: Token) =>
+        set((state) => ({
+          watchlist: state.watchlist.some((w: Token) => w.id === token.id)
+            ? state.watchlist
+            : [...state.watchlist, token],
+        })),
     }),
     {
       name: 'token-store',

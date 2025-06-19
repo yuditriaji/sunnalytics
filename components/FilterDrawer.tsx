@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { useTokenStore } from '../stores/useTokenStore';
 
 interface FilterDrawerProps {
@@ -7,18 +7,7 @@ interface FilterDrawerProps {
 }
 
 const FilterDrawer: React.FC<FilterDrawerProps> = ({ isOpen, onClose }) => {
-  const { filteredTokens, setFilteredTokens, tokens } = useTokenStore();
-  const [filters, setFilters] = useState({
-    category: '',
-    minPrice: '',
-    maxPrice: '',
-    minVolumeMarketCapRatio: '',
-    maxVolumeMarketCapRatio: '',
-    minCirculatingSupplyPercentage: '',
-    maxCirculatingSupplyPercentage: '',
-    isVolumeHealthy: '',
-    isCirculatingSupplyGood: '',
-  });
+  const { filteredTokens, setFilteredTokens, tokens, filters, setFilters } = useTokenStore();
 
   useEffect(() => {
     const applyFilters = () => {
@@ -35,11 +24,11 @@ const FilterDrawer: React.FC<FilterDrawerProps> = ({ isOpen, onClose }) => {
         filtered = filtered.filter(token => token.price !== undefined && token.price <= max);
       }
       if (filters.minVolumeMarketCapRatio) {
-        const min = parseFloat(filters.minVolumeMarketCapRatio) / 100; // Convert percentage to ratio
+        const min = parseFloat(filters.minVolumeMarketCapRatio) / 100;
         filtered = filtered.filter(token => token.volumeMarketCapRatio !== undefined && token.volumeMarketCapRatio >= min);
       }
       if (filters.maxVolumeMarketCapRatio) {
-        const max = parseFloat(filters.maxVolumeMarketCapRatio) / 100; // Convert percentage to ratio
+        const max = parseFloat(filters.maxVolumeMarketCapRatio) / 100;
         filtered = filtered.filter(token => token.volumeMarketCapRatio !== undefined && token.volumeMarketCapRatio <= max);
       }
       if (filters.minCirculatingSupplyPercentage) {
@@ -68,7 +57,7 @@ const FilterDrawer: React.FC<FilterDrawerProps> = ({ isOpen, onClose }) => {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setFilters(prev => ({ ...prev, [name]: value }));
+    setFilters({ [name]: value });
   };
 
   const handleReset = () => {

@@ -8,6 +8,8 @@ Project Tree (excluding node_modules, .next, package-lock.json):
 ├── components
 │   ├── BottomNav.tsx
 │   ├── FilterDrawer.tsx
+│   ├── TabbedFilters.tsx
+│   ├── TokenDetails.tsx
 │   ├── TokenTable.tsx
 │   └── WelcomeScreen.tsx
 ├── eslint.config.mjs
@@ -19,10 +21,14 @@ Project Tree (excluding node_modules, .next, package-lock.json):
 ├── package.json
 ├── pages
 │   ├── _app.tsx
+│   ├── ai-picks.tsx
 │   ├── api
 │   ├── charts.tsx
 │   ├── index.tsx
 │   ├── settings.tsx
+│   ├── tokens
+│   │   └── [id].tsx
+│   ├── watchlist.tsx
 │   └── welcome.tsx
 ├── postcss.config.js
 ├── src
@@ -30,6 +36,7 @@ Project Tree (excluding node_modules, .next, package-lock.json):
 │   └── useTokenStore.ts
 ├── styles
 │   └── globals.css
+├── sunnalytics-dev.txt
 ├── tailwind.config.js
 ├── tree.txt
 ├── tsconfig.json
