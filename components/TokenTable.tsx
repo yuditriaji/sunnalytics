@@ -1,7 +1,8 @@
-import React, { useMemo, memo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import { useRouter } from 'next/router';
 import { useTokenStore } from '../stores/useTokenStore';
 import FilterDrawer from './FilterDrawer';
-import { FaSort } from 'react-icons/fa';
+import { FaSort, FaStar } from 'react-icons/fa';
 import { FixedSizeList } from 'react-window';
 import debounce from 'lodash.debounce';
 import { useMediaQuery } from 'react-responsive';
@@ -27,6 +28,12 @@ interface Token {
   walletDistributionScore?: number;
 }
 
+interface TokenTableProps {
+  isFilterDrawerOpen: boolean;
+  onFilterClick: () => void;
+  onFilterClose: () => void;
+}
+
 export const formatNumber = (value: number | undefined, suffix: string = ''): string => {
   if (value === undefined || value === 0) return '-';
   if (value >= 1e9) return `$${Math.floor(value / 1e9)}${suffix}B`;
@@ -34,34 +41,20 @@ export const formatNumber = (value: number | undefined, suffix: string = ''): st
   return `$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 6 })}`;
 };
 
-interface TokenTableProps {
-  isFilterDrawerOpen: boolean;
-  onFilterClick: () => void;
-  onFilterClose: () => void;
-}
-
-const TokenTable: React.FC<TokenTableProps> = memo(({ isFilterDrawerOpen, onFilterClick, onFilterClose }) => {
-  const {
-    filteredTokens,
-    setFilteredTokens,
-    tokens,
-    searchQuery,
-    setSearchQuery,
-    sortConfig,
-    setSortConfig,
-    setActiveTab,
-    visibleColumns,
-    setVisibleColumns,
-  } = useTokenStore();
-  const [isColumnModalVisible, setIsColumnModalVisible] = React.useState(false);
-  const [isSortModalVisible, setIsSortModalVisible] = React.useState(false);
+const TokenTable: React.FC<TokenTableProps> = React.memo(({ isFilterDrawerOpen, onFilterClick, onFilterClose }) => {
+  const router = useRouter();
+  const { filteredTokens, setFilteredTokens, tokens, watchlist, addToWatchlist } = useTokenStore();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortConfig, setSortConfig] = useState<{ key: keyof Token; direction: 'asc' | 'desc' } | null>(null);
+  const [visibleColumns, setVisibleColumns] = useState<string[]>([]);
+  const [isColumnModalVisible, setIsColumnModalVisible] = useState(false);
+  const [isSortModalVisible, setIsSortModalVisible] = useState(false);
   const isMobile = useMediaQuery({ query: '(max-width: 640px)' });
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (isMobile) {
       setVisibleColumns(['symbol', 'volumeMarketCapRatio', 'isVolumeHealthy']);
-    } else if (visibleColumns.length === 3) {
-      // Only revert to default desktop columns if currently in mobile default
+    } else {
       setVisibleColumns([
         'symbol',
         'price',
@@ -69,18 +62,16 @@ const TokenTable: React.FC<TokenTableProps> = memo(({ isFilterDrawerOpen, onFilt
         'marketCap',
         'volumeMarketCapRatio',
         'isVolumeHealthy',
-        'cumpDumpRiskScore',
+        'pumpDumpRiskScore',
         'liquidityScore',
         'walletDistributionScore',
       ]);
     }
-  }, [isMobile, setVisibleColumns, visibleColumns.length]);
+  }, [isMobile]);
 
   const toggleColumn = (key: string) => {
-    setVisibleColumns(
-      visibleColumns.includes(key)
-        ? visibleColumns.filter(col => col !== key)
-        : [...visibleColumns, key]
+    setVisibleColumns((prev) =>
+      prev.includes(key) ? prev.filter((col) => col !== key) : [...prev, key]
     );
   };
 
@@ -88,7 +79,7 @@ const TokenTable: React.FC<TokenTableProps> = memo(({ isFilterDrawerOpen, onFilt
     debounce((query: string) => {
       setFilteredTokens(
         tokens.filter(
-          token =>
+          (token) =>
             token.name.toLowerCase().includes(query.toLowerCase()) ||
             token.symbol.toLowerCase().includes(query.toLowerCase())
         )
@@ -120,14 +111,19 @@ const TokenTable: React.FC<TokenTableProps> = memo(({ isFilterDrawerOpen, onFilt
   };
 
   const requestSort = (key: keyof Token) => {
-    let newSortConfig: { key: keyof Token; direction: 'asc' | 'desc' } | null = null;
-    if (!sortConfig || sortConfig.key !== key) {
-      newSortConfig = { key, direction: 'asc' };
-    } else if (sortConfig.direction === 'asc') {
-      newSortConfig = { key, direction: 'desc' };
-    }
-    setSortConfig(newSortConfig);
+    setSortConfig((prev) => {
+      if (!prev || prev.key !== key) {
+        return { key, direction: 'asc' };
+      }
+      return prev.direction === 'asc' ? { key, direction: 'desc' } : null;
+    });
     handleSortClose();
+  };
+
+  const handleTokenClick = (tokenId: string) => {
+    if (tokenId) {
+      router.push(`/tokens/${tokenId}`);
+    }
   };
 
   const sortedTokens = useMemo(() => {
@@ -136,10 +132,20 @@ const TokenTable: React.FC<TokenTableProps> = memo(({ isFilterDrawerOpen, onFilt
       const aValue = a[sortConfig.key];
       const bValue = b[sortConfig.key];
       if (aValue === undefined || bValue === undefined) return 0;
-      if (sortConfig.direction === 'asc') {
-        return aValue > bValue ? 1 : -1;
+      if (typeof aValue === 'string' && typeof bValue === 'string') {
+        return sortConfig.direction === 'asc'
+          ? aValue.localeCompare(bValue)
+          : bValue.localeCompare(aValue);
       }
-      return aValue < bValue ? 1 : -1;
+      if (typeof aValue === 'number' && typeof bValue === 'number') {
+        return sortConfig.direction === 'asc' ? aValue - bValue : bValue - aValue;
+      }
+      if (typeof aValue === 'boolean' && typeof bValue === 'boolean') {
+        return sortConfig.direction === 'asc'
+          ? Number(aValue) - Number(bValue)
+          : Number(bValue) - Number(aValue);
+      }
+      return 0;
     });
   }, [filteredTokens, sortConfig]);
 
@@ -153,35 +159,38 @@ const TokenTable: React.FC<TokenTableProps> = memo(({ isFilterDrawerOpen, onFilt
     'pumpDumpRiskScore',
     'liquidityScore',
     'walletDistributionScore',
-  ].filter(col => visibleColumns.includes(col));
+  ].filter((col) => visibleColumns.includes(col));
 
-  const formatNumber = (value: number | undefined, suffix: string = '') => {
-    if (value === undefined || value === 0) return '-';
-    if (value >= 1e9) return `$${Math.floor(value / 1e9)}${suffix}B`;
-    if (value >= 1e6) return `$${Math.floor(value / 1e6)}${suffix}M`;
-    return `$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 6 })}`;
-  };
-
-  const formatRatio = (value: number | undefined) => value !== undefined ? `${(value * 100).toFixed(2)}%` : '-';
-  const formatBoolean = (value: boolean | undefined) => value !== undefined ? (value ? 'Yes' : 'No') : '-';
-  const formatScore = (value: number | undefined) => value !== undefined ? value.toFixed(2) : '-';
+  const formatRatio = (value: number | undefined) => (value !== undefined ? `${(value * 100).toFixed(2)}%` : '-');
+  const formatBoolean = (value: boolean | undefined) => (value !== undefined ? (value ? 'Yes' : 'No') : '-');
+  const formatScore = (value: number | undefined) => (value !== undefined ? value.toFixed(2) : '-');
 
   const Row = ({ index, style }: { index: number; style: React.CSSProperties }) => {
     const token = sortedTokens[index];
+    const isInWatchlist = watchlist.some((w) => w.id === token.id);
+
+    const handleAddToWatchlist = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (!isInWatchlist) {
+        addToWatchlist(token);
+      }
+    };
+
     return (
       <div
         style={style}
-        className="bg-gray-800 p-2 flex items-center space-x-4 text-white rounded shadow-sm hover:bg-gray-700 transition-colors"
+        className="bg-gray-800 p-2 flex items-center space-x-2 text-white rounded shadow-sm hover:bg-gray-700 transition-colors cursor-pointer"
         role="row"
         aria-label={`Token ${token.symbol}`}
+        onClick={() => handleTokenClick(token.id)}
       >
-        {columns.map(col => (
+        {columns.map((col) => (
           <div key={col} className="flex-1 text-sm truncate" role="cell">
             {col === 'symbol' ? (
-              <span>{token.symbol}</span>
+              <span className="font-semibold">{token.symbol}</span>
             ) : col === 'price' ? (
               <button className="bg-green-500 text-black px-2 py-1 rounded hover:bg-green-400 transition-colors">
-                Buy ${formatNumber(token.price)}
+                Buy {formatNumber(token.price)}
               </button>
             ) : col === 'volume24h' ? (
               formatNumber(token.volume24h)
@@ -202,25 +211,34 @@ const TokenTable: React.FC<TokenTableProps> = memo(({ isFilterDrawerOpen, onFilt
             )}
           </div>
         ))}
+        <button
+          onClick={handleAddToWatchlist}
+          className={`p-1 rounded-full ${
+            isInWatchlist ? 'text-yellow-500' : 'text-gray-400 hover:text-yellow-500'
+          } transition-colors`}
+          aria-label={isInWatchlist ? 'Remove from watchlist' : 'Add to watchlist'}
+        >
+          <FaStar />
+        </button>
       </div>
     );
   };
 
   return (
-    <div className="p-4">
-      <div className="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between">
+    <div className="p-4 space-y-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <input
           type="text"
           placeholder="Search tokens..."
           value={searchQuery}
           onChange={handleSearchChange}
-          className="w-full sm:max-w-xs p-2 border border-gray-600 rounded bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full sm:max-w-xs p-2 border border-gray-600 rounded bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-500 transition-all"
           aria-label="Search tokens"
         />
-        <div className="mt-2 sm:mt-0 sm:ml-4 flex space-x-2">
+        <div className="flex flex-wrap gap-2">
           <select
-            onChange={e => requestSort(e.target.value as keyof Token)}
-            className="p-2 bg-gray-700 text-white rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+            onChange={(e) => requestSort(e.target.value as keyof Token)}
+            className="p-2 bg-gray-700 text-white rounded focus:outline-none focus:ring-2 focus:ring-yellow-500 transition-all"
             value={sortConfig?.key || ''}
             aria-label="Sort tokens by"
           >
@@ -234,51 +252,65 @@ const TokenTable: React.FC<TokenTableProps> = memo(({ isFilterDrawerOpen, onFilt
           </select>
           <button
             onClick={showColumnModal}
-            className="px-4 py-2 bg-gray-700 text-white rounded hover:bg-gray-600 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="px-4 py-2 bg-gray-700 text-white rounded hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-yellow-500 transition-all"
             aria-label="Customize table columns"
           >
-            Add/Remove Columns
+            Columns
           </button>
           <button
             onClick={onFilterClick}
-            className="px-4 py-2 bg-yellow-500 text-black rounded hover:bg-yellow-400 transition-colors focus:outline-none focus:ring-2 focus:ring-yellow-500"
+            className="px-4 py-2 bg-yellow-500 text-black rounded hover:bg-yellow-400 focus:outline-none focus:ring-2 focus:ring-yellow-500 transition-all"
             aria-label="Open filter drawer"
           >
             Filter
           </button>
           <button
             onClick={showSortModal}
-            className="px-4 py-2 bg-gray-700 text-white rounded hover:bg-gray-600 transition-colors flex items-center focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="px-4 py-2 bg-gray-700 text-white rounded hover:bg-gray-600 flex items-center focus:outline-none focus:ring-2 focus:ring-yellow-500 transition-all"
             aria-label="Open sort options"
           >
             <FaSort className="mr-1" /> Sort
           </button>
         </div>
       </div>
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto rounded-lg shadow-lg">
         <div className="min-w-full">
           <div
-            className="grid grid-cols-[minmax(80px,1fr)_minmax(100px,1fr)_minmax(100px,1fr)_minmax(100px,1fr)_minmax(120px,1fr)_minmax(100px,1fr)_minmax(120px,1fr)_minmax(120px,1fr)_minmax(120px,1fr)] gap-2 sticky top-0 bg-gray-900 z-10 p-2 text-white font-bold"
+            className={`grid gap-2 sticky top-0 bg-gray-800 z-10 p-2 text-white font-bold border-b border-gray-700`}
+            style={{
+              gridTemplateColumns: columns.map(() => isMobile ? '1fr' : 'minmax(80px, 1fr)').join(' '),
+            }}
             role="row"
             aria-label="Table headers"
           >
-            {columns.map(col => (
+            {columns.map((col) => (
               <div
                 key={col}
                 className="text-sm truncate"
                 role="columnheader"
-                aria-sort={sortConfig?.key === col ? (sortConfig.direction === 'asc' ? 'ascending' : 'descending') : undefined}
+                aria-sort={
+                  sortConfig?.key === col
+                    ? sortConfig.direction === 'asc'
+                      ? 'ascending'
+                      : 'descending'
+                    : 'none'
+                }
               >
-                {col === 'symbol' ? 'Symbol' : 
-                 col === 'volumeMarketCapRatio' ? 'Vol/Mkt Cap Ratio' : 
-                 col === 'isVolumeHealthy' ? 'Health' : 
-                 col === 'pumpDumpRiskScore' ? 'Pump/Dump Risk' : 
-                 col === 'walletDistributionScore' ? 'Wallet Dist Score' : 
-                 col.charAt(0).toUpperCase() + col.slice(1).replace(/([A-Z])/g, ' $1')}
+                {col === 'symbol'
+                  ? 'Symbol'
+                  : col === 'volumeMarketCapRatio'
+                  ? 'Vol/Mkt Cap'
+                  : col === 'isVolumeHealthy'
+                  ? 'Health'
+                  : col === 'pumpDumpRiskScore'
+                  ? 'Risk'
+                  : col === 'walletDistributionScore'
+                  ? 'Wallet Score'
+                  : col.charAt(0).toUpperCase() + col.slice(1).replace(/([A-Z])/g, ' $1')}
               </div>
             ))}
           </div>
-          <div role="grid" id="token-data-table">
+          <div role="grid" aria-label="Token data table" className="bg-gray-900">
             <FixedSizeList
               height={400}
               itemCount={sortedTokens.length}
@@ -291,9 +323,9 @@ const TokenTable: React.FC<TokenTableProps> = memo(({ isFilterDrawerOpen, onFilt
         </div>
       </div>
       {isColumnModalVisible && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end justify-center z-50">
-          <div className="bg-gray-800 w-full max-w-md p-4 rounded-t-lg">
-            <h2 className="text-lg font-bold text-white mb-4">Customize Table Columns</h2>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-gray-800 w-full max-w-md p-6 rounded-lg shadow-xl">
+            <h2 className="text-lg font-bold text-white mb-4">Customize Columns</h2>
             {[
               'symbol',
               'price',
@@ -304,29 +336,34 @@ const TokenTable: React.FC<TokenTableProps> = memo(({ isFilterDrawerOpen, onFilt
               'pumpDumpRiskScore',
               'liquidityScore',
               'walletDistributionScore',
-            ].map(key => (
-              <div key={key} className="flex items-center mb-2">
+            ].map((key) => (
+              <div key={key} className="flex items-center mb-3">
                 <input
                   type="checkbox"
                   checked={visibleColumns.includes(key)}
                   onChange={() => toggleColumn(key)}
-                  className="mr-2 h-4 w-4 text-green-500 bg-gray-700 border-gray-600 rounded focus:ring-green-500"
+                  className="mr-2 h-4 w-4 text-yellow-500 bg-gray-700 border-gray-600 rounded focus:ring-yellow-500"
                   id={`column-${key}`}
                   aria-label={`Toggle ${key} column`}
                 />
-                <label htmlFor={`column-${key}`} className="text-white">
-                  {key === 'symbol' ? 'Symbol' : 
-                   key === 'volumeMarketCapRatio' ? 'Vol/Mkt Cap Ratio' : 
-                   key === 'isVolumeHealthy' ? 'Health' : 
-                   key === 'pumpDumpRiskScore' ? 'Pump/Dump Risk' : 
-                   key === 'walletDistributionScore' ? 'Wallet Dist Score' : 
-                   key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1')}
+                <label htmlFor={`column-${key}`} className="text-white text-sm">
+                  {key === 'symbol'
+                    ? 'Symbol'
+                    : key === 'volumeMarketCapRatio'
+                    ? 'Vol/Mkt Cap'
+                    : key === 'isVolumeHealthy'
+                    ? 'Health'
+                    : key === 'pumpDumpRiskScore'
+                    ? 'Risk'
+                    : key === 'walletDistributionScore'
+                    ? 'Wallet Score'
+                    : key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1')}
                 </label>
               </div>
             ))}
             <button
               onClick={handleColumnClose}
-              className="w-full mt-4 px-4 py-2 bg-green-500 text-white rounded hover:bg-green-400 transition-colors focus:outline-none focus:ring-2 focus:ring-green-500"
+              className="w-full mt-4 px-4 py-2 bg-yellow-500 text-black rounded hover:bg-yellow-400 transition-all focus:outline-none focus:ring-2 focus:ring-yellow-500"
               aria-label="Close column customization"
             >
               Done
@@ -336,7 +373,7 @@ const TokenTable: React.FC<TokenTableProps> = memo(({ isFilterDrawerOpen, onFilt
       )}
       {isSortModalVisible && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-gray-800 w-full max-w-md p-4 rounded-lg">
+          <div className="bg-gray-800 w-full max-w-md p-6 rounded-lg shadow-xl">
             <h2 className="text-lg font-bold text-white mb-4">Sort By</h2>
             {[
               'price',
@@ -346,25 +383,31 @@ const TokenTable: React.FC<TokenTableProps> = memo(({ isFilterDrawerOpen, onFilt
               'pumpDumpRiskScore',
               'liquidityScore',
               'walletDistributionScore',
-            ].map(key => (
-              <div key={key} className="mb-2">
+            ].map((key) => (
+              <div key={key} className="mb-3">
                 <button
                   onClick={() => requestSort(key as keyof Token)}
-                  className="w-full text-left px-4 py-2 bg-gray-700 rounded hover:bg-gray-600 text-white flex justify-between focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full text-left p-2 bg-gray-700 rounded hover:bg-gray-600 text-white flex justify-between focus:outline-none focus:ring-2 focus:ring-yellow-500 transition-all"
                   aria-label={`Sort by ${key}`}
                 >
-                  <span>{key === 'volumeMarketCapRatio' ? 'Vol/Mkt Cap Ratio' : 
-                         key === 'isVolumeHealthy' ? 'Health' : 
-                         key === 'pumpDumpRiskScore' ? 'Pump/Dump Risk' : 
-                         key === 'walletDistributionScore' ? 'Wallet Dist Score' : 
-                         key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1')}</span>
+                  <span>
+                    {key === 'volumeMarketCapRatio'
+                      ? 'Vol/Mkt Cap'
+                      : key === 'isVolumeHealthy'
+                      ? 'Health'
+                      : key === 'pumpDumpRiskScore'
+                      ? 'Risk'
+                      : key === 'walletDistributionScore'
+                      ? 'Wallet Score'
+                      : key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1')}
+                  </span>
                   <span>{sortConfig?.key === key ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}</span>
                 </button>
               </div>
             ))}
             <button
               onClick={handleSortClose}
-              className="w-full mt-4 px-4 py-2 bg-green-500 text-white rounded hover:bg-green-400 transition-colors focus:outline-none focus:ring-2 focus:ring-green-500"
+              className="w-full mt-4 px-4 py-2 bg-yellow-500 text-black rounded hover:bg-yellow-400 transition-all focus:outline-none focus:ring-2 focus:ring-yellow-500"
               aria-label="Close sort options"
             >
               Done
