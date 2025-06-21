@@ -1,7 +1,7 @@
 // components/BottomNav.tsx
 import React from 'react';
 import { useRouter } from 'next/router';
-import { FaChartLine, FaFilter, FaSearch, FaHome, FaStar } from 'react-icons/fa';
+import { FaChartLine, FaFilter, FaSearch, FaHome, FaStar, FaRobot } from 'react-icons/fa';
 
 interface BottomNavProps {
   onFilterClick?: () => void;
@@ -44,7 +44,7 @@ const BottomNav: React.FC<BottomNavProps> = ({ onFilterClick, onSearchFocus }) =
           router.pathname === '/ai-picks' ? 'text-yellow-400' : 'text-gray-400'
         } hover:text-yellow-400 transition-all duration-200 hover:scale-110`}
       >
-        <FaChartLine className="text-lg mb-1" />
+        <FaRobot className="text-lg mb-1" />
         <span>AI Picks</span>
       </button>
       <button

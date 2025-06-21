@@ -132,6 +132,7 @@ export const useTokenStore = create<TokenState>()(
             volume24h: item.volume24h,
             volumeMarketCapRatio: item.volumeMarketCapRatio,
             isVolumeHealthy: item.isVolumeHealthy,
+            pumpDumpRiskScore: item.pumpDumpRiskScore,
             liquidityScore: item.liquidityScore,
           }));
 
