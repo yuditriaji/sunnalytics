@@ -134,6 +134,8 @@ export const useTokenStore = create<TokenState>()(
             isVolumeHealthy: item.isVolumeHealthy,
             pumpDumpRiskScore: item.pumpDumpRiskScore,
             liquidityScore: item.liquidityScore,
+            walletDistributionScore: item.walletDistributionScore,
+            transferVolume24h: item.transferVolume24h,
           }));
 
           set({ tokens, filteredTokens: tokens, loading: false });

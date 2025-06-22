@@ -11,6 +11,13 @@ type Token = {
   symbol: string;
   volumeMarketCapRatio?: number;
   liquidityScore?: number;
+  pumpDumpRiskScore?: number;
+  walletDistributionScore?: number;
+  isVolumeHealthy?: boolean;
+  stats?: {
+    priceChange24h?: number;
+    liquidityScore?: number;
+  };
   // Add other properties as needed
 };
 
@@ -25,7 +32,15 @@ export default function AIPicks() {
 
   const getBoomingTokens = (tokens: Token[]) => {
     return tokens
-      .filter(token => token.volumeMarketCapRatio !== undefined && token.liquidityScore !== undefined)
+      .filter(token =>           
+          token.volumeMarketCapRatio !== undefined &&
+          token.liquidityScore !== undefined &&
+          token.pumpDumpRiskScore !== undefined &&
+          token.walletDistributionScore !== undefined &&
+          token.liquidityScore > 50 &&
+          token.pumpDumpRiskScore < 30 &&
+          token.walletDistributionScore > 70 &&
+          token.isVolumeHealthy)
       .sort((a, b) => {
         const aScore = (a.volumeMarketCapRatio || 0) * (a.liquidityScore || 0);
         const bScore = (b.volumeMarketCapRatio || 0) * (b.liquidityScore || 0);
@@ -44,7 +59,7 @@ export default function AIPicks() {
         <ul className="space-y-2">
           {boomingTokens.map(token => (
             <li key={token.id} className="bg-gray-800 p-2 rounded shadow-sm hover:bg-gray-700 cursor-pointer" onClick={() => router.push(`/tokens/${token.id}`)}>
-              {token.symbol} - Vol/Mkt Cap: {(token.volumeMarketCapRatio || 0 * 100).toFixed(2)}%, Liquidity: {(token.liquidityScore || 0).toFixed(2)}
+              {token.symbol} - Vol/Mkt Cap: {(token.volumeMarketCapRatio || 0 * 100).toFixed(2)}%, Liquidity: {(token.liquidityScore || 0).toFixed(2)}, Pump/Dump Risk: {token.pumpDumpRiskScore}, Wallet Distribution: {token.walletDistributionScore}
             </li>
           ))}
         </ul>
