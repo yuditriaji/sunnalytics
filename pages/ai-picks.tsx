@@ -9,6 +9,7 @@ import BottomNav from '../components/BottomNav';
 type Token = {
   id: string;
   symbol: string;
+  updatedAt?: string; // Added updatedAt
   volumeMarketCapRatio?: number;
   liquidityScore?: number;
   pumpDumpRiskScore?: number;
@@ -20,6 +21,19 @@ type Token = {
   };
   // Add other properties as needed
 };
+
+function formatDate(dateString?: string) {
+  if (!dateString) return 'N/A';
+  const date = new Date(dateString);
+  return date.toLocaleString('en-GB', {
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true
+  }).replace(',', '');
+}
 
 export default function AIPicks() {
   const { tokens, setFilteredTokens } = useTokenStore();
@@ -60,6 +74,7 @@ export default function AIPicks() {
           {boomingTokens.map(token => (
             <li key={token.id} className="bg-gray-800 p-2 rounded shadow-sm hover:bg-gray-700 cursor-pointer" onClick={() => router.push(`/tokens/${token.id}`)}>
               {token.symbol} - Vol/Mkt Cap: {(token.volumeMarketCapRatio || 0 * 100).toFixed(2)}%, Liquidity: {(token.liquidityScore || 0).toFixed(2)}, Pump/Dump Risk: {token.pumpDumpRiskScore}, Wallet Distribution: {token.walletDistributionScore}
+              <div className="text-xs text-gray-400 mt-1">Updated: {formatDate(token.updatedAt)}</div>
             </li>
           ))}
         </ul>

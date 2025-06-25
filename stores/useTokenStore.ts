@@ -21,6 +21,7 @@ interface Token {
   liquidityScore?: number;
   pumpDumpRiskScore?: number;
   walletDistributionScore?: number;
+  updatedAt?: string;
   stats?: {
     priceChange24h?: number;
     volatilityScore24h?: number;
@@ -136,6 +137,7 @@ export const useTokenStore = create<TokenState>()(
             liquidityScore: item.liquidityScore,
             walletDistributionScore: item.walletDistributionScore,
             transferVolume24h: item.transferVolume24h,
+            updatedAt: item.updatedAt,
           }));
 
           set({ tokens, filteredTokens: tokens, loading: false });
