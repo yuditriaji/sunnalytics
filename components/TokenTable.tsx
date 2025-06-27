@@ -1,17 +1,18 @@
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/router';
+import { useMediaQuery } from 'react-responsive';
 import { useTokenStore } from '../stores/useTokenStore';
 import FilterDrawer from './FilterDrawer';
-import { FaSort, FaStar } from 'react-icons/fa';
+import { FaSort } from 'react-icons/fa';
 import { FixedSizeList } from 'react-window';
 import debounce from 'lodash.debounce';
-import { useMediaQuery } from 'react-responsive';
 
 interface Token {
   id: string;
   name: string;
   symbol: string;
   category: string;
+  exchange?: string;
   price?: number;
   marketCap?: number;
   volume24h?: number;
@@ -42,115 +43,12 @@ export const formatNumber = (value: number | undefined, suffix: string = ''): st
 };
 
 const TokenTable: React.FC<TokenTableProps> = React.memo(({ isFilterDrawerOpen, onFilterClick, onFilterClose }) => {
+  const { filteredTokens, setFilteredTokens, tokens } = useTokenStore();
   const router = useRouter();
-  const { filteredTokens, setFilteredTokens, tokens, watchlist, addToWatchlist } = useTokenStore();
   const [searchQuery, setSearchQuery] = useState('');
-  const [sortConfig, setSortConfig] = useState<{ key: keyof Token; direction: 'asc' | 'desc' } | null>(null);
-  const [visibleColumns, setVisibleColumns] = useState<string[]>([]);
-  const [isColumnModalVisible, setIsColumnModalVisible] = useState(false);
-  const [isSortModalVisible, setIsSortModalVisible] = useState(false);
-  const isMobile = useMediaQuery({ query: '(max-width: 640px)' });
-
-  useEffect(() => {
-    if (isMobile) {
-      setVisibleColumns(['symbol', 'volumeMarketCapRatio', 'isVolumeHealthy']);
-    } else {
-      setVisibleColumns([
-        'symbol',
-        'price',
-        'volume24h',
-        'marketCap',
-        'volumeMarketCapRatio',
-        'isVolumeHealthy',
-        'pumpDumpRiskScore',
-        'liquidityScore',
-        'walletDistributionScore',
-      ]);
-    }
-  }, [isMobile]);
-
-  const toggleColumn = (key: string) => {
-    setVisibleColumns((prev) =>
-      prev.includes(key) ? prev.filter((col) => col !== key) : [...prev, key]
-    );
-  };
-
-  const debouncedSearch = useCallback(
-    debounce((query: string) => {
-      setFilteredTokens(
-        tokens.filter(
-          (token) =>
-            token.name.toLowerCase().includes(query.toLowerCase()) ||
-            token.symbol.toLowerCase().includes(query.toLowerCase())
-        )
-      );
-    }, 300),
-    [tokens, setFilteredTokens]
-  );
-
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const query = e.target.value;
-    setSearchQuery(query);
-    debouncedSearch(query);
-  };
-
-  const showColumnModal = () => {
-    setIsColumnModalVisible(true);
-  };
-
-  const handleColumnClose = () => {
-    setIsColumnModalVisible(false);
-  };
-
-  const showSortModal = () => {
-    setIsSortModalVisible(true);
-  };
-
-  const handleSortClose = () => {
-    setIsSortModalVisible(false);
-  };
-
-  const requestSort = (key: keyof Token) => {
-    setSortConfig((prev) => {
-      if (!prev || prev.key !== key) {
-        return { key, direction: 'asc' };
-      }
-      return prev.direction === 'asc' ? { key, direction: 'desc' } : null;
-    });
-    handleSortClose();
-  };
-
-  const handleTokenClick = (tokenId: string) => {
-    if (tokenId) {
-      router.push(`/tokens/${tokenId}`);
-    }
-  };
-
-  const sortedTokens = useMemo(() => {
-    if (!sortConfig) return filteredTokens;
-    return [...filteredTokens].sort((a, b) => {
-      const aValue = a[sortConfig.key];
-      const bValue = b[sortConfig.key];
-      if (aValue === undefined || bValue === undefined) return 0;
-      if (typeof aValue === 'string' && typeof bValue === 'string') {
-        return sortConfig.direction === 'asc'
-          ? aValue.localeCompare(bValue)
-          : bValue.localeCompare(aValue);
-      }
-      if (typeof aValue === 'number' && typeof bValue === 'number') {
-        return sortConfig.direction === 'asc' ? aValue - bValue : bValue - aValue;
-      }
-      if (typeof aValue === 'boolean' && typeof bValue === 'boolean') {
-        return sortConfig.direction === 'asc'
-          ? Number(aValue) - Number(bValue)
-          : Number(bValue) - Number(aValue);
-      }
-      return 0;
-    });
-  }, [filteredTokens, sortConfig]);
-
-  const columns = [
+  const [visibleColumns, setVisibleColumns] = useState<string[]>([
     'symbol',
+    'exchange',
     'price',
     'volume24h',
     'marketCap',
@@ -159,37 +57,123 @@ const TokenTable: React.FC<TokenTableProps> = React.memo(({ isFilterDrawerOpen, 
     'pumpDumpRiskScore',
     'liquidityScore',
     'walletDistributionScore',
-  ].filter((col) => visibleColumns.includes(col));
+  ]);
+  const [isColumnModalVisible, setIsColumnModalVisible] = useState(false);
+  const [isSortModalVisible, setIsSortModalVisible] = useState(false);
+  const [sortConfig, setSortConfig] = useState<{ key: keyof Token; direction: 'asc' | 'desc' } | null>(null);
+  const isMobile = useMediaQuery({ maxWidth: 640 });
 
-  const formatRatio = (value: number | undefined) => (value !== undefined ? `${(value * 100).toFixed(2)}%` : '-');
-  const formatBoolean = (value: boolean | undefined) => (value !== undefined ? (value ? 'Yes' : 'No') : '-');
-  const formatScore = (value: number | undefined) => (value !== undefined ? value.toFixed(2) : '-');
+  const toggleColumn = useCallback((key: string) => {
+    setVisibleColumns(prev =>
+      prev.includes(key) ? prev.filter(col => col !== key) : [...prev, key]
+    );
+  }, []);
 
-  const Row = ({ index, style }: { index: number; style: React.CSSProperties }) => {
-    const token = sortedTokens[index];
-    const isInWatchlist = watchlist.some((w) => w.id === token.id);
+  const debouncedSearch = useCallback(
+    debounce((query: string) => {
+      setFilteredTokens(
+        tokens.filter(
+          token =>
+            token.name.toLowerCase().includes(query.toLowerCase()) ||
+            token.symbol.toLowerCase().includes(query.toLowerCase()) ||
+            token.exchange?.toLowerCase().includes(query.toLowerCase())
+        )
+      );
+    }, 300),
+    [tokens, setFilteredTokens]
+  );
 
-    const handleAddToWatchlist = (e: React.MouseEvent) => {
-      e.stopPropagation();
-      if (!isInWatchlist) {
-        addToWatchlist(token);
+  const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const query = e.target.value;
+    setSearchQuery(query);
+    debouncedSearch(query);
+  }, [debouncedSearch]);
+
+  const showColumnModal = useCallback(() => setIsColumnModalVisible(true), []);
+  const handleColumnClose = useCallback(() => setIsColumnModalVisible(false), []);
+  const showSortModal = useCallback(() => setIsSortModalVisible(true), []);
+  const handleSortClose = useCallback(() => setIsSortModalVisible(false), []);
+
+  const requestSort = useCallback((key: keyof Token) => {
+    setSortConfig(prev => {
+      if (!prev || prev.key !== key) {
+        return { key, direction: 'asc' };
       }
-    };
+      return prev.direction === 'asc' ? { key, direction: 'desc' } : null;
+    });
+    handleSortClose();
+  }, [handleSortClose]);
 
+  const sortedTokens = useMemo(() => {
+    if (!sortConfig) return filteredTokens;
+    return [...filteredTokens].sort((a, b) => {
+      const aValue = a[sortConfig.key];
+      const bValue = b[sortConfig.key];
+      if (aValue === undefined || bValue === undefined) return 0;
+      if (sortConfig.direction === 'asc') {
+        return aValue > bValue ? 1 : -1;
+      }
+      return aValue < bValue ? 1 : -1;
+    });
+  }, [filteredTokens, sortConfig]);
+
+  const columns = useMemo(() => [
+    'symbol',
+    'exchange',
+    'price',
+    'volume24h',
+    'marketCap',
+    'volumeMarketCapRatio',
+    'isVolumeHealthy',
+    'pumpDumpRiskScore',
+    'liquidityScore',
+    'walletDistributionScore',
+  ].filter(col => visibleColumns.includes(col)), [visibleColumns]);
+
+  const formatRatio = useCallback((value: number | undefined) => 
+    value !== undefined ? `${(value * 100).toFixed(2)}%` : '-', 
+  []);
+
+  const formatBoolean = useCallback((value: boolean | undefined) => 
+    value !== undefined ? (value ? 'Yes' : 'No') : '-', 
+  []);
+
+  const formatScore = useCallback((value: number | undefined) => 
+    value !== undefined ? value.toFixed(2) : '-', 
+  []);
+
+  const getColumnLabel = useCallback((col: string) => {
+    return col === 'symbol' ? 'Symbol' :
+           col === 'exchange' ? 'Exchange' :
+           col === 'volumeMarketCapRatio' ? 'Vol/Mkt Cap' :
+           col === 'isVolumeHealthy' ? 'Health' :
+           col === 'pumpDumpRiskScore' ? 'Risk' :
+           col === 'walletDistributionScore' ? 'Wallet Score' :
+           col.charAt(0).toUpperCase() + col.slice(1).replace(/([A-Z])/g, ' $1');
+  }, []);
+
+  const Row = useCallback(({ index, style }: { index: number; style: React.CSSProperties }) => {
+    const token = sortedTokens[index];
     return (
       <div
         style={style}
-        className="bg-gray-800 p-2 flex items-center space-x-2 text-white rounded shadow-sm hover:bg-gray-700 transition-colors cursor-pointer"
-        role="row"
-        aria-label={`Token ${token.symbol}`}
-        onClick={() => handleTokenClick(token.id)}
+        className="bg-gray-800 p-2 flex items-center space-x-2 sm:space-x-4 text-white rounded shadow-sm hover:bg-gray-700 cursor-pointer transition-colors"
+        role="button"
+        aria-label={`View details for ${token.symbol}`}
+        onClick={() => router.push(`/tokens/${token.id}`)}
       >
-        {columns.map((col) => (
+        {columns.map(col => (
           <div key={col} className="flex-1 text-sm truncate" role="cell">
             {col === 'symbol' ? (
-              <span className="font-semibold">{token.symbol}</span>
+              <span>{token.symbol}</span>
+            ) : col === 'exchange' ? (
+              <span>{token.exchange || '-'}</span>
             ) : col === 'price' ? (
-              <button className="bg-green-500 text-black px-2 py-1 rounded hover:bg-green-400 transition-colors">
+              <button 
+                className="bg-green-500 text-black px-2 py-1 rounded hover:bg-green-400 transition-colors"
+                onClick={e => e.stopPropagation()} // Prevent row click when clicking Buy button
+                aria-label={`Buy ${token.symbol}`}
+              >
                 Buy {formatNumber(token.price)}
               </button>
             ) : col === 'volume24h' ? (
@@ -211,22 +195,13 @@ const TokenTable: React.FC<TokenTableProps> = React.memo(({ isFilterDrawerOpen, 
             )}
           </div>
         ))}
-        <button
-          onClick={handleAddToWatchlist}
-          className={`p-1 rounded-full ${
-            isInWatchlist ? 'text-yellow-500' : 'text-gray-400 hover:text-yellow-500'
-          } transition-colors`}
-          aria-label={isInWatchlist ? 'Remove from watchlist' : 'Add to watchlist'}
-        >
-          <FaStar />
-        </button>
       </div>
     );
-  };
+  }, [columns, sortedTokens, router, formatNumber, formatRatio, formatBoolean, formatScore]);
 
   return (
-    <div className="p-4 space-y-4">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div className="p-4">
+      <div className="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <input
           type="text"
           placeholder="Search tokens..."
@@ -243,6 +218,7 @@ const TokenTable: React.FC<TokenTableProps> = React.memo(({ isFilterDrawerOpen, 
             aria-label="Sort tokens by"
           >
             <option value="">Sort By</option>
+            <option value="exchange">Exchange</option>
             <option value="marketCap">Market Cap</option>
             <option value="volume24h">Volume 24h</option>
             <option value="price">Price</option>
@@ -278,35 +254,19 @@ const TokenTable: React.FC<TokenTableProps> = React.memo(({ isFilterDrawerOpen, 
           <div
             className={`grid gap-2 sticky top-0 bg-gray-800 z-10 p-2 text-white font-bold border-b border-gray-700`}
             style={{
-              gridTemplateColumns: columns.map(() => isMobile ? '1fr' : 'minmax(80px, 1fr)').join(' '),
+              gridTemplateColumns: isMobile ? 'repeat(auto-fit, minmax(80px, 1fr))' : columns.map(() => 'minmax(80px, 1fr)').join(' '),
             }}
             role="row"
             aria-label="Table headers"
           >
-            {columns.map((col) => (
+            {columns.map(col => (
               <div
                 key={col}
                 className="text-sm truncate"
                 role="columnheader"
-                aria-sort={
-                  sortConfig?.key === col
-                    ? sortConfig.direction === 'asc'
-                      ? 'ascending'
-                      : 'descending'
-                    : 'none'
-                }
+                aria-sort={sortConfig?.key === col ? (sortConfig.direction === 'asc' ? 'ascending' : 'descending') : 'none'}
               >
-                {col === 'symbol'
-                  ? 'Symbol'
-                  : col === 'volumeMarketCapRatio'
-                  ? 'Vol/Mkt Cap'
-                  : col === 'isVolumeHealthy'
-                  ? 'Health'
-                  : col === 'pumpDumpRiskScore'
-                  ? 'Risk'
-                  : col === 'walletDistributionScore'
-                  ? 'Wallet Score'
-                  : col.charAt(0).toUpperCase() + col.slice(1).replace(/([A-Z])/g, ' $1')}
+                {getColumnLabel(col)}
               </div>
             ))}
           </div>
@@ -328,6 +288,7 @@ const TokenTable: React.FC<TokenTableProps> = React.memo(({ isFilterDrawerOpen, 
             <h2 className="text-lg font-bold text-white mb-4">Customize Columns</h2>
             {[
               'symbol',
+              'exchange',
               'price',
               'volume24h',
               'marketCap',
@@ -336,7 +297,7 @@ const TokenTable: React.FC<TokenTableProps> = React.memo(({ isFilterDrawerOpen, 
               'pumpDumpRiskScore',
               'liquidityScore',
               'walletDistributionScore',
-            ].map((key) => (
+            ].map(key => (
               <div key={key} className="flex items-center mb-3">
                 <input
                   type="checkbox"
@@ -347,17 +308,7 @@ const TokenTable: React.FC<TokenTableProps> = React.memo(({ isFilterDrawerOpen, 
                   aria-label={`Toggle ${key} column`}
                 />
                 <label htmlFor={`column-${key}`} className="text-white text-sm">
-                  {key === 'symbol'
-                    ? 'Symbol'
-                    : key === 'volumeMarketCapRatio'
-                    ? 'Vol/Mkt Cap'
-                    : key === 'isVolumeHealthy'
-                    ? 'Health'
-                    : key === 'pumpDumpRiskScore'
-                    ? 'Risk'
-                    : key === 'walletDistributionScore'
-                    ? 'Wallet Score'
-                    : key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1')}
+                  {getColumnLabel(key)}
                 </label>
               </div>
             ))}
@@ -376,6 +327,7 @@ const TokenTable: React.FC<TokenTableProps> = React.memo(({ isFilterDrawerOpen, 
           <div className="bg-gray-800 w-full max-w-md p-6 rounded-lg shadow-xl">
             <h2 className="text-lg font-bold text-white mb-4">Sort By</h2>
             {[
+              'exchange',
               'price',
               'marketCap',
               'volume24h',
@@ -383,24 +335,14 @@ const TokenTable: React.FC<TokenTableProps> = React.memo(({ isFilterDrawerOpen, 
               'pumpDumpRiskScore',
               'liquidityScore',
               'walletDistributionScore',
-            ].map((key) => (
+            ].map(key => (
               <div key={key} className="mb-3">
                 <button
                   onClick={() => requestSort(key as keyof Token)}
                   className="w-full text-left p-2 bg-gray-700 rounded hover:bg-gray-600 text-white flex justify-between focus:outline-none focus:ring-2 focus:ring-yellow-500 transition-all"
                   aria-label={`Sort by ${key}`}
                 >
-                  <span>
-                    {key === 'volumeMarketCapRatio'
-                      ? 'Vol/Mkt Cap'
-                      : key === 'isVolumeHealthy'
-                      ? 'Health'
-                      : key === 'pumpDumpRiskScore'
-                      ? 'Risk'
-                      : key === 'walletDistributionScore'
-                      ? 'Wallet Score'
-                      : key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1')}
-                  </span>
+                  <span>{getColumnLabel(key)}</span>
                   <span>{sortConfig?.key === key ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}</span>
                 </button>
               </div>

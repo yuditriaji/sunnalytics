@@ -7,6 +7,7 @@ interface Token {
   name: string;
   symbol: string;
   category: string;
+  exchange?: string;
   marketCap?: number;
   volume24h?: number;
   price?: number;
@@ -39,6 +40,7 @@ interface FilterState {
   maxCirculatingSupplyPercentage: string;
   isVolumeHealthy: string;
   isCirculatingSupplyGood: string;
+  exchange: string;
 }
 
 interface TokenState {
@@ -85,6 +87,7 @@ export const useTokenStore = create<TokenState>()(
         maxCirculatingSupplyPercentage: '',
         isVolumeHealthy: '',
         isCirculatingSupplyGood: '',
+        exchange: '',
       },
       activeTab: 'all',
       visibleColumns: [
@@ -97,6 +100,7 @@ export const useTokenStore = create<TokenState>()(
         'pumpDumpRiskScore',
         'liquidityScore',
         'walletDistributionScore',
+        'exchange',
       ],
       setTokens: (tokens: Token[]) => set({ tokens }),
       setFilteredTokens: (tokens: Token[]) => set({ filteredTokens: tokens }),
@@ -128,6 +132,7 @@ export const useTokenStore = create<TokenState>()(
             name: item.name,
             symbol: item.symbol,
             category: item.category || 'Unknown',
+            exchange: item.exchange,
             price: item.price,
             marketCap: item.marketCap,
             volume24h: item.volume24h,

@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTokenStore } from '../stores/useTokenStore';
 
 interface FilterDrawerProps {
@@ -7,7 +7,19 @@ interface FilterDrawerProps {
 }
 
 const FilterDrawer: React.FC<FilterDrawerProps> = ({ isOpen, onClose }) => {
-  const { filteredTokens, setFilteredTokens, tokens, filters, setFilters } = useTokenStore();
+  const { filteredTokens, setFilteredTokens, tokens } = useTokenStore();
+  const [filters, setFilters] = useState({
+    category: '',
+    minPrice: '',
+    maxPrice: '',
+    minVolumeMarketCapRatio: '',
+    maxVolumeMarketCapRatio: '',
+    minCirculatingSupplyPercentage: '',
+    maxCirculatingSupplyPercentage: '',
+    isVolumeHealthy: '',
+    isCirculatingSupplyGood: '',
+    exchange: '',
+  });
 
   useEffect(() => {
     const applyFilters = () => {
@@ -49,6 +61,9 @@ const FilterDrawer: React.FC<FilterDrawerProps> = ({ isOpen, onClose }) => {
       } else if (filters.isCirculatingSupplyGood === 'false') {
         filtered = filtered.filter(token => token.isCirculatingSupplyGood === false);
       }
+      if (filters.exchange) {
+        filtered = filtered.filter(token => token.exchange?.toLowerCase() === filters.exchange.toLowerCase());
+      }
       setFilteredTokens(filtered);
     };
 
@@ -57,7 +72,7 @@ const FilterDrawer: React.FC<FilterDrawerProps> = ({ isOpen, onClose }) => {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setFilters({ [name]: value });
+    setFilters(prev => ({ ...prev, [name]: value }));
   };
 
   const handleReset = () => {
@@ -71,6 +86,7 @@ const FilterDrawer: React.FC<FilterDrawerProps> = ({ isOpen, onClose }) => {
       maxCirculatingSupplyPercentage: '',
       isVolumeHealthy: '',
       isCirculatingSupplyGood: '',
+      exchange: '',
     });
     setFilteredTokens(tokens);
   };
@@ -94,6 +110,21 @@ const FilterDrawer: React.FC<FilterDrawerProps> = ({ isOpen, onClose }) => {
               <option value="altcoin">Altcoin</option>
               <option value="defi">DeFi</option>
               <option value="memecoin">Memecoin</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-300">Exchange</label>
+            <select
+              name="exchange"
+              value={filters.exchange}
+              onChange={handleChange}
+              className="mt-1 block w-full p-2 bg-gray-700 border border-gray-600 rounded text-white"
+            >
+              <option value="">All</option>
+              <option value="bybit_spot">Bybit_Spot</option>
+              <option value="binance">Binance</option>
+              <option value="coinbase">Coinbase</option>
+              <option value="kraken">Kraken</option>
             </select>
           </div>
           <div>

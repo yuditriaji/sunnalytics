@@ -3,6 +3,7 @@ Project Tree (excluding node_modules, .next, package-lock.json):
 ├── .env
 ├── .gitignore
 ├── README.md
+├── all_files_combined.txt
 ├── combine_files.py
 ├── components
 │   ├── BottomNav.tsx
