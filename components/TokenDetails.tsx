@@ -5,7 +5,7 @@ import { Chart as ChartJS, LineElement, PointElement, LinearScale, TimeScale, To
 import 'chartjs-adapter-date-fns';
 import { useTokens } from '../utils/api';
 import BottomNav from './BottomNav';
-import { formatNumber } from './TokenTable';
+import { formatLargeNumber as formatNumber } from '../utils/tokenStats';
 
 ChartJS.register(LineElement, PointElement, LinearScale, TimeScale, Tooltip, Legend);
 
@@ -123,9 +123,9 @@ const TokenDetails: React.FC = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="bg-gray-800 p-4 rounded-lg shadow">
             <h2 className="text-lg font-semibold">Details</h2>
-            <p>Price: {formatNumber(token.price)}</p>
-            <p>Market Cap: {formatNumber(token.marketCap)}</p>
-            <p>24h Volume: {formatNumber(token.volume24h)}</p>
+            <p>Price: ${token.price ? formatNumber(token.price) : 'N/A'}</p>
+            <p>Market Cap: ${token.marketCap ? formatNumber(token.marketCap) : 'N/A'}</p>
+            <p>24h Volume: ${token.volume24h ? formatNumber(token.volume24h) : 'N/A'}</p>
             <p>Category: {token.category.charAt(0).toUpperCase() + token.category.slice(1)}</p>
             <p>Volume/Market Cap Ratio: {(token.volumeMarketCapRatio * 100)?.toFixed(2)}%</p>
             <p>Healthy Volume: {token.isVolumeHealthy ? 'Yes' : 'No'}</p>

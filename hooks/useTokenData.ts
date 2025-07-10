@@ -6,6 +6,7 @@ interface Token {
   id: string;
   name: string;
   symbol: string;
+  exchange: string;
   category: string;
   price?: number;
   marketCap?: number;
@@ -24,6 +25,12 @@ interface Token {
   liquidityScore?: number;
   pumpDumpRiskScore?: number;
   walletDistributionScore?: number;
+  rank?: number;
+  stats?: {
+    priceChange24h?: number;
+    volatilityScore24h?: number;
+    liquidityScore?: number;
+  };
 }
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001';
