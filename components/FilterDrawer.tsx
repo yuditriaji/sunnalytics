@@ -10,6 +10,7 @@ const FilterDrawer: React.FC<FilterDrawerProps> = ({ isOpen, onClose }) => {
   const { filteredTokens, setFilteredTokens, tokens } = useTokenStore();
   const [filters, setFilters] = useState({
     category: '',
+    exchange: '',
     minPrice: '',
     maxPrice: '',
     minVolumeMarketCapRatio: '',
@@ -18,7 +19,6 @@ const FilterDrawer: React.FC<FilterDrawerProps> = ({ isOpen, onClose }) => {
     maxCirculatingSupplyPercentage: '',
     isVolumeHealthy: '',
     isCirculatingSupplyGood: '',
-    exchange: '',
   });
 
   useEffect(() => {
@@ -26,6 +26,9 @@ const FilterDrawer: React.FC<FilterDrawerProps> = ({ isOpen, onClose }) => {
       let filtered = [...tokens];
       if (filters.category) {
         filtered = filtered.filter(token => token.category === filters.category);
+      }
+      if (filters.exchange) {
+        filtered = filtered.filter(token => token.exchange.toLowerCase() === filters.exchange.toLowerCase());
       }
       if (filters.minPrice) {
         const min = parseFloat(filters.minPrice);
@@ -36,11 +39,11 @@ const FilterDrawer: React.FC<FilterDrawerProps> = ({ isOpen, onClose }) => {
         filtered = filtered.filter(token => token.price !== undefined && token.price <= max);
       }
       if (filters.minVolumeMarketCapRatio) {
-        const min = parseFloat(filters.minVolumeMarketCapRatio) / 100;
+        const min = parseFloat(filters.minVolumeMarketCapRatio);
         filtered = filtered.filter(token => token.volumeMarketCapRatio !== undefined && token.volumeMarketCapRatio >= min);
       }
       if (filters.maxVolumeMarketCapRatio) {
-        const max = parseFloat(filters.maxVolumeMarketCapRatio) / 100;
+        const max = parseFloat(filters.maxVolumeMarketCapRatio);
         filtered = filtered.filter(token => token.volumeMarketCapRatio !== undefined && token.volumeMarketCapRatio <= max);
       }
       if (filters.minCirculatingSupplyPercentage) {
@@ -61,9 +64,6 @@ const FilterDrawer: React.FC<FilterDrawerProps> = ({ isOpen, onClose }) => {
       } else if (filters.isCirculatingSupplyGood === 'false') {
         filtered = filtered.filter(token => token.isCirculatingSupplyGood === false);
       }
-      if (filters.exchange) {
-        filtered = filtered.filter(token => token.exchange?.toLowerCase() === filters.exchange.toLowerCase());
-      }
       setFilteredTokens(filtered);
     };
 
@@ -78,6 +78,7 @@ const FilterDrawer: React.FC<FilterDrawerProps> = ({ isOpen, onClose }) => {
   const handleReset = () => {
     setFilters({
       category: '',
+      exchange: '',
       minPrice: '',
       maxPrice: '',
       minVolumeMarketCapRatio: '',
@@ -86,7 +87,6 @@ const FilterDrawer: React.FC<FilterDrawerProps> = ({ isOpen, onClose }) => {
       maxCirculatingSupplyPercentage: '',
       isVolumeHealthy: '',
       isCirculatingSupplyGood: '',
-      exchange: '',
     });
     setFilteredTokens(tokens);
   };
@@ -121,10 +121,8 @@ const FilterDrawer: React.FC<FilterDrawerProps> = ({ isOpen, onClose }) => {
               className="mt-1 block w-full p-2 bg-gray-700 border border-gray-600 rounded text-white"
             >
               <option value="">All</option>
-              <option value="bybit_spot">Bybit_Spot</option>
               <option value="binance">Binance</option>
-              <option value="coinbase">Coinbase</option>
-              <option value="kraken">Kraken</option>
+              <option value="bybit_spot">Bybit Spot</option>
             </select>
           </div>
           <div>
@@ -152,7 +150,7 @@ const FilterDrawer: React.FC<FilterDrawerProps> = ({ isOpen, onClose }) => {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-300">Min Volume Market Cap Ratio (%)</label>
+            <label className="block text-sm font-medium text-gray-300">Min Volume/Market Cap Ratio</label>
             <input
               type="number"
               name="minVolumeMarketCapRatio"
@@ -165,14 +163,14 @@ const FilterDrawer: React.FC<FilterDrawerProps> = ({ isOpen, onClose }) => {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-300">Max Volume Market Cap Ratio (%)</label>
+            <label className="block text-sm font-medium text-gray-300">Max Volume/Market Cap Ratio</label>
             <input
               type="number"
               name="maxVolumeMarketCapRatio"
               value={filters.maxVolumeMarketCapRatio}
               onChange={handleChange}
               className="mt-1 block w-full p-2 bg-gray-700 border border-gray-600 rounded text-white"
-              placeholder="100.00"
+              placeholder="0.00"
               min="0"
               step="0.01"
             />

@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
-import { Line } from 'react-chartjs-2';
-import { Chart as ChartJS, LineElement, PointElement, LinearScale, TimeScale, Tooltip, Legend, ChartOptions } from 'chart.js';
+import { Line, Doughnut, Bar } from 'react-chartjs-2';
+import { Chart as ChartJS, LineElement, PointElement, LinearScale, TimeScale, Tooltip, Legend, ChartOptions, ArcElement, BarElement, CategoryScale } from 'chart.js';
 import 'chartjs-adapter-date-fns';
 import { useTokens } from '../../utils/api';
 import BottomNav from '../../components/BottomNav';
-import { formatNumber } from '../../components/TokenTable';
+import RiskIndicator from '../../components/RiskIndicator';
+import { formatLargeNumber as formatNumber } from '../../utils/tokenStats';
+import { FaChartLine, FaShieldAlt, FaChartBar, FaInfoCircle, FaExclamationTriangle, FaCheckCircle, FaTachometerAlt, FaChartPie } from 'react-icons/fa';
 
-ChartJS.register(LineElement, PointElement, LinearScale, TimeScale, Tooltip, Legend);
+ChartJS.register(LineElement, PointElement, LinearScale, TimeScale, Tooltip, Legend, ArcElement, BarElement, CategoryScale);
 
 interface TokenHistory {
   id: string;
@@ -23,11 +25,17 @@ interface Token {
   name: string;
   symbol: string;
   category: string;
+  exchange?: string;
   price?: number;
   marketCap?: number;
   volume24h?: number;
   volumeMarketCapRatio?: number;
   isVolumeHealthy?: boolean;
+  liquidityScore?: number;
+  pumpDumpRiskScore?: number;
+  walletDistributionScore?: number;
+  circulatingSupplyPercentage?: number;
+  isCirculatingSupplyGood?: boolean;
 }
 
 const TokenDetails: React.FC = () => {
@@ -36,21 +44,19 @@ const TokenDetails: React.FC = () => {
   const { tokens, isLoading, error } = useTokens();
   const [history, setHistory] = useState<TokenHistory[]>([]);
   const [apiError, setApiError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'overview' | 'price' | 'volume' | 'risk' | 'market'>('overview');
 
-  // Replace with your backend URL, e.g., 'https://your-backend.com'
   const BACKEND_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001';
 
   useEffect(() => {
     if (id) {
       const url = `${BACKEND_URL}/api/tokens/${id}/history`;
-      console.log(`Fetching history from: ${url}`);
       fetch(url)
         .then(res => {
           if (!res.ok) throw new Error(`HTTP ${res.status}`);
           return res.json();
         })
         .then(data => {
-          console.log('Token history data:', data);
           setHistory(data);
           setApiError(null);
         })
@@ -59,7 +65,7 @@ const TokenDetails: React.FC = () => {
           setApiError(err.message);
         });
     }
-  }, [id]);
+  }, [id, BACKEND_URL]);
 
   const token = tokens?.find((t: Token) => t.id === id);
 
@@ -67,7 +73,6 @@ const TokenDetails: React.FC = () => {
   if (error) return <div className="p-4 text-center text-red-500">Error: {error}</div>;
   if (!token) return <div className="p-4 text-center text-gray-400">Token not found</div>;
 
-  // Group by date, minimal filtering
   const validHistory = history
     .filter(h => h.price != null && h.volume24h != null && h.marketCap != null && h.marketCap !== 0)
     .reduce((acc: TokenHistory[], h) => {
@@ -78,92 +83,461 @@ const TokenDetails: React.FC = () => {
     }, [])
     .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
-  console.log('Valid history:', validHistory);
+  // Metric Card Component
+  const MetricCard = ({ title, value, subtitle, icon, color, tooltip }: any) => (
+    <div className="bg-gray-800 p-6 rounded-lg relative group">
+      <div className="flex items-start justify-between">
+        <div>
+          <p className="text-gray-400 text-sm mb-1">{title}</p>
+          <p className={`text-2xl font-bold ${color || 'text-white'}`}>{value}</p>
+          {subtitle && <p className="text-xs text-gray-500 mt-1">{subtitle}</p>}
+        </div>
+        <div className={`text-2xl ${color || 'text-gray-400'}`}>{icon}</div>
+      </div>
+      {tooltip && (
+        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-700 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">
+          {tooltip}
+        </div>
+      )}
+    </div>
+  );
 
-  const chartData = {
-    labels: validHistory.map(h => new Date(h.timestamp)),
-    datasets: [
-      {
-        label: 'Volume/Market Cap Ratio (%)',
-        data: validHistory.map(h => (h.volume24h! / h.marketCap!) * 100),
-        borderColor: '#FBBF24',
-        yAxisID: 'y-ratio',
-      },
-      {
-        label: 'Price (USD)',
-        data: validHistory.map(h => h.price!),
-        borderColor: '#3B82F6',
-        yAxisID: 'y-price',
-      },
-    ],
-  };
+  // Tab content components
+  const OverviewTab = () => (
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <MetricCard
+          title="Current Price"
+          value={formatNumber(token.price)}
+          icon={<FaChartLine />}
+          color="text-blue-400"
+          tooltip="Latest trading price"
+        />
+        <MetricCard
+          title="Market Cap"
+          value={formatNumber(token.marketCap)}
+          icon={<FaChartBar />}
+          color="text-green-400"
+          tooltip="Total market value"
+        />
+        <MetricCard
+          title="24h Volume"
+          value={formatNumber(token.volume24h)}
+          icon={<FaTachometerAlt />}
+          color="text-yellow-400"
+          tooltip="Trading volume in last 24 hours"
+        />
+      </div>
 
-  const chartOptions: ChartOptions<'line'> = {
-    responsive: true,
-    scales: {
-      x: {
-        type: 'time',
-        time: { unit: 'day' },
-        title: { display: true, text: 'Date' },
-      },
-      'y-ratio': {
-        type: 'linear',
-        position: 'left',
-        title: { display: true, text: 'Ratio (%)' },
-        beginAtZero: true,
-      },
-      'y-price': {
-        type: 'linear',
-        position: 'right',
-        title: { display: true, text: 'Price ($)' },
-        beginAtZero: true,
-      },
-    },
-    plugins: {
-      legend: { display: true },
-      tooltip: { mode: 'index', intersect: false },
-    },
-  };
-
-  console.log('Chart data:', chartData);
-
-  return (
-    <div className="min-h-screen flex flex-col bg-gray-900 text-white">
-      <header className="bg-gray-800 p-4 flex items-center">
-        <button onClick={() => router.back()} className="mr-4 text-yellow-400">
-          ← Back
-        </button>
-        <h1 className="text-xl font-bold">{token.name} ({token.symbol.toUpperCase()})</h1>
-      </header>
-      <main className="flex-1 p-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="bg-gray-800 p-4 rounded-lg">
-            <h2 className="text-lg font-semibold">Details</h2>
-            <p>Price: {formatNumber(token.price)}</p>
-            <p>Market Cap: {formatNumber(token.marketCap)}</p>
-            <p>24h Volume: {formatNumber(token.volume24h)}</p>
-            <p>Category: {token.category.charAt(0).toUpperCase() + token.category.slice(1)}</p>
-            <p>Volume/Market Cap Ratio: {(token.volumeMarketCapRatio * 100)?.toFixed(2)}%</p>
-            <p>Healthy Volume: {token.isVolumeHealthy ? 'Yes' : 'No'}</p>
+      <div className="bg-gray-800 p-6 rounded-lg">
+        <h3 className="text-lg font-semibold mb-4">Token Information</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <p className="text-gray-400 text-sm">Symbol</p>
+            <p className="text-white font-medium">{token.symbol.toUpperCase()}</p>
           </div>
-          <div className="bg-gray-800 p-4 rounded-lg h-80">
-            <h2 className="text-lg font-semibold mb-2">Historical Data</h2>
-            <div className="h-64">
-              {apiError ? (
-                <div className="text-center text-red-500 h-full flex items-center justify-center">
-                  Error: {apiError}
-                </div>
-              ) : validHistory.length > 0 ? (
-                <Line data={chartData} options={chartOptions} />
+          <div>
+            <p className="text-gray-400 text-sm">Category</p>
+            <p className="text-white font-medium">{token.category.charAt(0).toUpperCase() + token.category.slice(1)}</p>
+          </div>
+          <div>
+            <p className="text-gray-400 text-sm">Exchange</p>
+            <p className="text-white font-medium">{token.exchange || 'N/A'}</p>
+          </div>
+          <div>
+            <p className="text-gray-400 text-sm">Volume Health</p>
+            <p className="text-white font-medium flex items-center">
+              {token.isVolumeHealthy ? (
+                <>
+                  <FaCheckCircle className="text-green-400 mr-2" />
+                  Healthy
+                </>
               ) : (
-                <div className="text-center text-gray-400 h-full flex items-center justify-center">
-                  No history data
-                </div>
+                <>
+                  <FaExclamationTriangle className="text-red-400 mr-2" />
+                  Unhealthy
+                </>
               )}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-gray-800 p-6 rounded-lg">
+        <h3 className="text-lg font-semibold mb-4">Overall Risk Assessment</h3>
+        <RiskIndicator
+          pumpDumpRiskScore={token.pumpDumpRiskScore}
+          liquidityScore={token.liquidityScore}
+          walletDistributionScore={token.walletDistributionScore}
+          isVolumeHealthy={token.isVolumeHealthy}
+          volumeMarketCapRatio={token.volumeMarketCapRatio}
+          compact={false}
+        />
+      </div>
+    </div>
+  );
+
+  const PriceAnalyticsTab = () => {
+    const priceChartData = {
+      labels: validHistory.map(h => new Date(h.timestamp)),
+      datasets: [
+        {
+          label: 'Price (USD)',
+          data: validHistory.map(h => h.price!),
+          borderColor: '#3B82F6',
+          backgroundColor: 'rgba(59, 130, 246, 0.1)',
+          fill: true,
+        },
+      ],
+    };
+
+    const priceChartOptions: ChartOptions<'line'> = {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        x: {
+          type: 'time',
+          time: { unit: 'day' },
+          grid: { color: 'rgba(255, 255, 255, 0.1)' },
+        },
+        y: {
+          grid: { color: 'rgba(255, 255, 255, 0.1)' },
+          title: { display: true, text: 'Price (USD)' },
+        },
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: { mode: 'index', intersect: false },
+      },
+    };
+
+    return (
+      <div className="space-y-6">
+        <div className="bg-gray-800 p-6 rounded-lg">
+          <h3 className="text-lg font-semibold mb-4">Price History</h3>
+          <div className="h-64">
+            {validHistory.length > 0 ? (
+              <Line data={priceChartData} options={priceChartOptions} />
+            ) : (
+              <div className="h-full flex items-center justify-center text-gray-400">
+                No historical data available
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <MetricCard
+            title="Current Price"
+            value={formatNumber(token.price)}
+            subtitle="Latest trading price"
+            icon={<FaChartLine />}
+            color="text-blue-400"
+          />
+          <MetricCard
+            title="Price Volatility"
+            value="Coming Soon"
+            subtitle="24h price volatility"
+            icon={<FaChartBar />}
+            color="text-yellow-400"
+          />
+        </div>
+      </div>
+    );
+  };
+
+  const VolumeAnalyticsTab = () => {
+    const volumeChartData = {
+      labels: validHistory.map(h => new Date(h.timestamp)),
+      datasets: [
+        {
+          label: 'Volume (USD)',
+          data: validHistory.map(h => h.volume24h!),
+          backgroundColor: 'rgba(34, 197, 94, 0.5)',
+          borderColor: '#22C55E',
+        },
+      ],
+    };
+
+    const volumeChartOptions: ChartOptions<'bar'> = {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        x: {
+          type: 'time',
+          time: { unit: 'day' },
+          grid: { color: 'rgba(255, 255, 255, 0.1)' },
+        },
+        y: {
+          grid: { color: 'rgba(255, 255, 255, 0.1)' },
+          title: { display: true, text: 'Volume (USD)' },
+        },
+      },
+      plugins: {
+        legend: { display: false },
+      },
+    };
+
+    return (
+      <div className="space-y-6">
+        <div className="bg-gray-800 p-6 rounded-lg">
+          <h3 className="text-lg font-semibold mb-4">Volume History</h3>
+          <div className="h-64">
+            {validHistory.length > 0 ? (
+              <Bar data={volumeChartData} options={volumeChartOptions} />
+            ) : (
+              <div className="h-full flex items-center justify-center text-gray-400">
+                No historical data available
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <MetricCard
+            title="24h Volume"
+            value={formatNumber(token.volume24h)}
+            icon={<FaTachometerAlt />}
+            color="text-green-400"
+          />
+          <MetricCard
+            title="Volume/Market Cap"
+            value={`${((token.volumeMarketCapRatio || 0) * 100).toFixed(2)}%`}
+            icon={<FaChartBar />}
+            color={token.volumeMarketCapRatio && token.volumeMarketCapRatio > 1 ? 'text-yellow-400' : 'text-green-400'}
+            tooltip="Higher ratio indicates more trading activity"
+          />
+          <MetricCard
+            title="Volume Health"
+            value={token.isVolumeHealthy ? 'Healthy' : 'Unhealthy'}
+            icon={token.isVolumeHealthy ? <FaCheckCircle /> : <FaExclamationTriangle />}
+            color={token.isVolumeHealthy ? 'text-green-400' : 'text-red-400'}
+          />
+        </div>
+      </div>
+    );
+  };
+
+  const RiskAssessmentTab = () => {
+    const riskData = {
+      labels: ['Pump/Dump Risk', 'Liquidity', 'Wallet Distribution'],
+      datasets: [
+        {
+          data: [
+            token.pumpDumpRiskScore || 0,
+            100 - (token.liquidityScore || 0),
+            100 - (token.walletDistributionScore || 0),
+          ],
+          backgroundColor: ['#EF4444', '#F59E0B', '#10B981'],
+          borderWidth: 0,
+        },
+      ],
+    };
+
+    const riskChartOptions: ChartOptions<'doughnut'> = {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: { color: 'white' },
+        },
+      },
+    };
+
+    return (
+      <div className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="bg-gray-800 p-6 rounded-lg">
+            <h3 className="text-lg font-semibold mb-4">Risk Distribution</h3>
+            <div className="h-64">
+              <Doughnut data={riskData} options={riskChartOptions} />
+            </div>
+          </div>
+
+          <div className="bg-gray-800 p-6 rounded-lg">
+            <h3 className="text-lg font-semibold mb-4">Risk Metrics</h3>
+            <div className="space-y-4">
+              <div>
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-gray-400">Pump/Dump Risk</span>
+                  <span className={`font-medium ${(token.pumpDumpRiskScore || 0) > 60 ? 'text-red-400' : (token.pumpDumpRiskScore || 0) > 30 ? 'text-yellow-400' : 'text-green-400'}`}>
+                    {token.pumpDumpRiskScore?.toFixed(0) || 0}%
+                  </span>
+                </div>
+                <div className="w-full bg-gray-700 rounded-full h-2">
+                  <div
+                    className={`h-2 rounded-full ${(token.pumpDumpRiskScore || 0) > 60 ? 'bg-red-400' : (token.pumpDumpRiskScore || 0) > 30 ? 'bg-yellow-400' : 'bg-green-400'}`}
+                    style={{ width: `${token.pumpDumpRiskScore || 0}%` }}
+                  ></div>
+                </div>
+              </div>
+
+              <div>
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-gray-400">Liquidity Score</span>
+                  <span className={`font-medium ${(token.liquidityScore || 0) < 40 ? 'text-red-400' : (token.liquidityScore || 0) < 70 ? 'text-yellow-400' : 'text-green-400'}`}>
+                    {token.liquidityScore?.toFixed(0) || 0}%
+                  </span>
+                </div>
+                <div className="w-full bg-gray-700 rounded-full h-2">
+                  <div
+                    className={`h-2 rounded-full ${(token.liquidityScore || 0) < 40 ? 'bg-red-400' : (token.liquidityScore || 0) < 70 ? 'bg-yellow-400' : 'bg-green-400'}`}
+                    style={{ width: `${token.liquidityScore || 0}%` }}
+                  ></div>
+                </div>
+              </div>
+
+              <div>
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-gray-400">Wallet Distribution</span>
+                  <span className={`font-medium ${(token.walletDistributionScore || 0) < 40 ? 'text-red-400' : (token.walletDistributionScore || 0) < 70 ? 'text-yellow-400' : 'text-green-400'}`}>
+                    {token.walletDistributionScore?.toFixed(0) || 0}%
+                  </span>
+                </div>
+                <div className="w-full bg-gray-700 rounded-full h-2">
+                  <div
+                    className={`h-2 rounded-full ${(token.walletDistributionScore || 0) < 40 ? 'bg-red-400' : (token.walletDistributionScore || 0) < 70 ? 'bg-yellow-400' : 'bg-green-400'}`}
+                    style={{ width: `${token.walletDistributionScore || 0}%` }}
+                  ></div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
+
+        <div className="bg-gray-800 p-6 rounded-lg">
+          <h3 className="text-lg font-semibold mb-4">Risk Analysis</h3>
+          <RiskIndicator
+            pumpDumpRiskScore={token.pumpDumpRiskScore}
+            liquidityScore={token.liquidityScore}
+            walletDistributionScore={token.walletDistributionScore}
+            isVolumeHealthy={token.isVolumeHealthy}
+            volumeMarketCapRatio={token.volumeMarketCapRatio}
+            compact={false}
+          />
+        </div>
+      </div>
+    );
+  };
+
+  const MarketHealthTab = () => (
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <MetricCard
+          title="Market Cap"
+          value={formatNumber(token.marketCap)}
+          subtitle="Total market value"
+          icon={<FaChartBar />}
+          color="text-blue-400"
+        />
+        <MetricCard
+          title="Circulating Supply"
+          value={`${token.circulatingSupplyPercentage?.toFixed(2) || 'N/A'}%`}
+          subtitle="Percentage of total supply in circulation"
+          icon={<FaInfoCircle />}
+          color={token.isCirculatingSupplyGood ? 'text-green-400' : 'text-yellow-400'}
+        />
+      </div>
+
+      <div className="bg-gray-800 p-6 rounded-lg">
+        <h3 className="text-lg font-semibold mb-4">Market Indicators</h3>
+        <div className="space-y-4">
+          <div className="flex justify-between items-center p-4 bg-gray-700 rounded">
+            <span className="text-gray-300">Volume/Market Cap Ratio</span>
+            <span className={`font-medium ${(token.volumeMarketCapRatio || 0) > 1 ? 'text-yellow-400' : 'text-green-400'}`}>
+              {((token.volumeMarketCapRatio || 0) * 100).toFixed(2)}%
+            </span>
+          </div>
+          <div className="flex justify-between items-center p-4 bg-gray-700 rounded">
+            <span className="text-gray-300">Volume Health Status</span>
+            <span className={`font-medium flex items-center ${token.isVolumeHealthy ? 'text-green-400' : 'text-red-400'}`}>
+              {token.isVolumeHealthy ? (
+                <>
+                  <FaCheckCircle className="mr-2" />
+                  Healthy
+                </>
+              ) : (
+                <>
+                  <FaExclamationTriangle className="mr-2" />
+                  Unhealthy
+                </>
+              )}
+            </span>
+          </div>
+          <div className="flex justify-between items-center p-4 bg-gray-700 rounded">
+            <span className="text-gray-300">Supply Health Status</span>
+            <span className={`font-medium flex items-center ${token.isCirculatingSupplyGood ? 'text-green-400' : 'text-yellow-400'}`}>
+              {token.isCirculatingSupplyGood ? (
+                <>
+                  <FaCheckCircle className="mr-2" />
+                  Good
+                </>
+              ) : (
+                <>
+                  <FaExclamationTriangle className="mr-2" />
+                  Moderate
+                </>
+              )}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="min-h-screen flex flex-col bg-gray-900 text-white">
+      <header className="bg-gray-800 p-4 flex items-center justify-between">
+        <div className="flex items-center">
+          <button onClick={() => router.back()} className="mr-4 text-yellow-400 hover:text-yellow-300">
+            ← Back
+          </button>
+          <div>
+            <h1 className="text-xl font-bold">{token.name} ({token.symbol.toUpperCase()})</h1>
+            <p className="text-sm text-gray-400">{token.category.charAt(0).toUpperCase() + token.category.slice(1)}</p>
+          </div>
+        </div>
+        <div className="text-right">
+          <p className="text-2xl font-bold">{formatNumber(token.price)}</p>
+          <p className="text-sm text-gray-400">Current Price</p>
+        </div>
+      </header>
+
+      {/* Tabbed Navigation */}
+      <div className="bg-gray-800 border-b border-gray-700">
+        <div className="flex overflow-x-auto">
+          {[
+            { id: 'overview', label: 'Overview', icon: <FaInfoCircle /> },
+            { id: 'price', label: 'Price Analytics', icon: <FaChartLine /> },
+            { id: 'volume', label: 'Volume Analytics', icon: <FaTachometerAlt /> },
+            { id: 'risk', label: 'Risk Assessment', icon: <FaShieldAlt /> },
+            { id: 'market', label: 'Market Health', icon: <FaChartPie /> },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id as any)}
+              className={`flex items-center space-x-2 px-6 py-3 text-sm font-medium transition-colors ${
+                activeTab === tab.id
+                  ? 'text-yellow-400 border-b-2 border-yellow-400'
+                  : 'text-gray-400 hover:text-white'
+              }`}
+            >
+              {tab.icon}
+              <span>{tab.label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <main className="flex-1 p-4 overflow-y-auto">
+        {activeTab === 'overview' && <OverviewTab />}
+        {activeTab === 'price' && <PriceAnalyticsTab />}
+        {activeTab === 'volume' && <VolumeAnalyticsTab />}
+        {activeTab === 'risk' && <RiskAssessmentTab />}
+        {activeTab === 'market' && <MarketHealthTab />}
       </main>
+
       <BottomNav onFilterClick={() => {}} />
     </div>
   );

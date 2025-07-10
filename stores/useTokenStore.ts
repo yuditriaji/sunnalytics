@@ -6,8 +6,8 @@ interface Token {
   id: string;
   name: string;
   symbol: string;
+  exchange: string;
   category: string;
-  exchange?: string;
   marketCap?: number;
   volume24h?: number;
   price?: number;
@@ -40,7 +40,6 @@ interface FilterState {
   maxCirculatingSupplyPercentage: string;
   isVolumeHealthy: string;
   isCirculatingSupplyGood: string;
-  exchange: string;
 }
 
 interface TokenState {
@@ -54,6 +53,7 @@ interface TokenState {
   filters: FilterState;
   activeTab: string;
   visibleColumns: string[];
+  scrollPosition: number;
   setTokens: (tokens: Token[]) => void;
   setFilteredTokens: (tokens: Token[]) => void;
   setLoading: (loading: boolean) => void;
@@ -63,6 +63,7 @@ interface TokenState {
   setFilters: (filters: Partial<FilterState>) => void;
   setActiveTab: (tab: string) => void;
   setVisibleColumns: (columns: string[]) => void;
+  setScrollPosition: (position: number) => void;
   fetchTokens: () => void;
   addToWatchlist: (token: Token) => void;
 }
@@ -87,21 +88,10 @@ export const useTokenStore = create<TokenState>()(
         maxCirculatingSupplyPercentage: '',
         isVolumeHealthy: '',
         isCirculatingSupplyGood: '',
-        exchange: '',
       },
       activeTab: 'all',
-      visibleColumns: [
-        'symbol',
-        'price',
-        'volume24h',
-        'marketCap',
-        'volumeMarketCapRatio',
-        'isVolumeHealthy',
-        'pumpDumpRiskScore',
-        'liquidityScore',
-        'walletDistributionScore',
-        'exchange',
-      ],
+      visibleColumns: [],
+      scrollPosition: 0,
       setTokens: (tokens: Token[]) => set({ tokens }),
       setFilteredTokens: (tokens: Token[]) => set({ filteredTokens: tokens }),
       setLoading: (loading: boolean) => set({ loading }),
@@ -112,6 +102,7 @@ export const useTokenStore = create<TokenState>()(
         set(state => ({ filters: { ...state.filters, ...filters } })),
       setActiveTab: (tab: string) => set({ activeTab: tab }),
       setVisibleColumns: (columns: string[]) => set({ visibleColumns: columns }),
+      setScrollPosition: (position: number) => set({ scrollPosition: position }),
       fetchTokens: async () => {
         set({ loading: true, error: null });
         try {
@@ -132,7 +123,6 @@ export const useTokenStore = create<TokenState>()(
             name: item.name,
             symbol: item.symbol,
             category: item.category || 'Unknown',
-            exchange: item.exchange,
             price: item.price,
             marketCap: item.marketCap,
             volume24h: item.volume24h,
