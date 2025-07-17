@@ -18,10 +18,12 @@ interface Token {
   fullyDilutedValuation?: number;
   volumeMarketCapRatio?: number;
   circulatingSupplyPercentage?: number;
+  totalSupply?: number;
+  circulatingSupply?: number;
   isVolumeHealthy?: boolean;
   isCirculatingSupplyGood?: boolean;
   potentialMultiplier?: number;
-  socialSentimentScore?: number; // New field for potential backend update
+  sentimentScore?: number;
   liquidityScore?: number;
   pumpDumpRiskScore?: number;
   walletDistributionScore?: number;

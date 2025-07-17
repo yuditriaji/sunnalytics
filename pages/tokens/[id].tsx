@@ -178,6 +178,101 @@ const TokenDetails: React.FC = () => {
   );
 
   const PriceAnalyticsTab = () => {
+    // Calculate volume/market cap ratio for each historical point
+    const volMktCapRatioHistory = validHistory.map(h => 
+      h.marketCap && h.marketCap > 0 ? (h.volume24h! / h.marketCap) * 100 : 0
+    );
+
+    const priceVsRatioChartData = {
+      labels: validHistory.map(h => new Date(h.timestamp)),
+      datasets: [
+        {
+          label: 'Price (USD)',
+          data: validHistory.map(h => h.price!),
+          borderColor: '#3B82F6',
+          backgroundColor: 'rgba(59, 130, 246, 0.1)',
+          fill: false,
+          yAxisID: 'y',
+        },
+        {
+          label: 'Vol/Mkt Cap Ratio (%)',
+          data: volMktCapRatioHistory,
+          borderColor: '#F59E0B',
+          backgroundColor: 'rgba(245, 158, 11, 0.1)',
+          fill: false,
+          yAxisID: 'y1',
+        },
+      ],
+    };
+
+    const priceVsRatioChartOptions: ChartOptions<'line'> = {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: {
+        mode: 'index',
+        intersect: false,
+      },
+      scales: {
+        x: {
+          type: 'time',
+          time: { unit: 'day' },
+          grid: { color: 'rgba(255, 255, 255, 0.1)' },
+          ticks: { color: 'rgba(255, 255, 255, 0.7)' },
+        },
+        y: {
+          type: 'linear',
+          display: true,
+          position: 'left',
+          grid: { color: 'rgba(255, 255, 255, 0.1)' },
+          ticks: { color: '#3B82F6' },
+          title: { 
+            display: true, 
+            text: 'Price (USD)',
+            color: '#3B82F6'
+          },
+        },
+        y1: {
+          type: 'linear',
+          display: true,
+          position: 'right',
+          grid: { drawOnChartArea: false },
+          ticks: { color: '#F59E0B' },
+          title: { 
+            display: true, 
+            text: 'Vol/Mkt Cap Ratio (%)',
+            color: '#F59E0B'
+          },
+        },
+      },
+      plugins: {
+        legend: { 
+          display: true,
+          labels: { color: 'white' }
+        },
+        tooltip: { 
+          mode: 'index', 
+          intersect: false,
+          callbacks: {
+            label: function(context) {
+              let label = context.dataset.label || '';
+              if (label) {
+                label += ': ';
+              }
+              if (context.parsed.y !== null) {
+                if (context.datasetIndex === 0) {
+                  label += '$' + context.parsed.y.toFixed(2);
+                } else {
+                  label += context.parsed.y.toFixed(2) + '%';
+                }
+              }
+              return label;
+            }
+          }
+        },
+      },
+    };
+
+    // Separate price history chart
     const priceChartData = {
       labels: validHistory.map(h => new Date(h.timestamp)),
       datasets: [
@@ -213,8 +308,51 @@ const TokenDetails: React.FC = () => {
 
     return (
       <div className="space-y-6">
+        {/* Price vs Volume/Market Cap Ratio Chart - Primary Analysis */}
         <div className="bg-gray-800 p-6 rounded-lg">
-          <h3 className="text-lg font-semibold mb-4">Price History</h3>
+          <h3 className="text-lg font-semibold mb-2">Price vs Volume/Market Cap Ratio Analysis</h3>
+          <p className="text-sm text-gray-400 mb-4">
+            Analyze the relationship between price movements and trading activity intensity
+          </p>
+          <div className="h-80">
+            {validHistory.length > 0 ? (
+              <Line data={priceVsRatioChartData} options={priceVsRatioChartOptions} />
+            ) : (
+              <div className="h-full flex items-center justify-center text-gray-400">
+                No historical data available
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Key Insights */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <MetricCard
+            title="Current Price"
+            value={formatNumber(token.price)}
+            subtitle="Latest trading price"
+            icon={<FaChartLine />}
+            color="text-blue-400"
+          />
+          <MetricCard
+            title="Current Vol/Mkt Cap"
+            value={`${((token.volumeMarketCapRatio || 0) * 100).toFixed(2)}%`}
+            subtitle={token.volumeMarketCapRatio && token.volumeMarketCapRatio > 1 ? "High activity" : "Normal activity"}
+            icon={<FaTachometerAlt />}
+            color={token.volumeMarketCapRatio && token.volumeMarketCapRatio > 1 ? 'text-yellow-400' : 'text-green-400'}
+          />
+          <MetricCard
+            title="Correlation"
+            value={validHistory.length > 0 ? "Analyzing..." : "N/A"}
+            subtitle="Price-Volume relationship"
+            icon={<FaChartBar />}
+            color="text-purple-400"
+          />
+        </div>
+
+        {/* Detailed Price History */}
+        <div className="bg-gray-800 p-6 rounded-lg">
+          <h3 className="text-lg font-semibold mb-4">Price History Detail</h3>
           <div className="h-64">
             {validHistory.length > 0 ? (
               <Line data={priceChartData} options={priceChartOptions} />
@@ -224,23 +362,6 @@ const TokenDetails: React.FC = () => {
               </div>
             )}
           </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <MetricCard
-            title="Current Price"
-            value={formatNumber(token.price)}
-            subtitle="Latest trading price"
-            icon={<FaChartLine />}
-            color="text-blue-400"
-          />
-          <MetricCard
-            title="Price Volatility"
-            value="Coming Soon"
-            subtitle="24h price volatility"
-            icon={<FaChartBar />}
-            color="text-yellow-400"
-          />
         </div>
       </div>
     );

@@ -90,7 +90,7 @@ interface AdvancedFiltersProps {
 }
 
 const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({ isCompact = false }) => {
-  const { setFilters: setStoreFilters, tokens, setFilteredTokens } = useTokenStore();
+  const { setFilters: setStoreFilters, tokens, setFilteredTokens, applyFilters } = useTokenStore();
   const [filters, setFilters] = useState<FilterState>(defaultFilters);
   const [selectedPreset, setSelectedPreset] = useState<string>('');
   const [customPresets, setCustomPresets] = useState<FilterPreset[]>([]);
@@ -107,69 +107,9 @@ const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({ isCompact = false }) 
   }, []);
 
   useEffect(() => {
-    applyFilters();
-  }, [filters, tokens]);
-
-  const applyFilters = () => {
-    let filtered = [...tokens];
-
-    // Apply all filters
-    if (filters.category) {
-      filtered = filtered.filter(token => token.category === filters.category);
-    }
-    if (filters.exchange) {
-      filtered = filtered.filter(token => token.exchange?.toLowerCase() === filters.exchange.toLowerCase());
-    }
-    if (filters.minPrice) {
-      const min = parseFloat(filters.minPrice);
-      filtered = filtered.filter(token => token.price !== undefined && token.price >= min);
-    }
-    if (filters.maxPrice) {
-      const max = parseFloat(filters.maxPrice);
-      filtered = filtered.filter(token => token.price !== undefined && token.price <= max);
-    }
-    if (filters.minVolumeMarketCapRatio) {
-      const min = parseFloat(filters.minVolumeMarketCapRatio);
-      filtered = filtered.filter(token => token.volumeMarketCapRatio !== undefined && token.volumeMarketCapRatio >= min);
-    }
-    if (filters.maxVolumeMarketCapRatio) {
-      const max = parseFloat(filters.maxVolumeMarketCapRatio);
-      filtered = filtered.filter(token => token.volumeMarketCapRatio !== undefined && token.volumeMarketCapRatio <= max);
-    }
-    if (filters.minCirculatingSupplyPercentage) {
-      const min = parseFloat(filters.minCirculatingSupplyPercentage);
-      filtered = filtered.filter(token => token.circulatingSupplyPercentage !== undefined && token.circulatingSupplyPercentage >= min);
-    }
-    if (filters.maxCirculatingSupplyPercentage) {
-      const max = parseFloat(filters.maxCirculatingSupplyPercentage);
-      filtered = filtered.filter(token => token.circulatingSupplyPercentage !== undefined && token.circulatingSupplyPercentage <= max);
-    }
-    if (filters.isVolumeHealthy === 'true') {
-      filtered = filtered.filter(token => token.isVolumeHealthy === true);
-    } else if (filters.isVolumeHealthy === 'false') {
-      filtered = filtered.filter(token => token.isVolumeHealthy === false);
-    }
-    if (filters.isCirculatingSupplyGood === 'true') {
-      filtered = filtered.filter(token => token.isCirculatingSupplyGood === true);
-    } else if (filters.isCirculatingSupplyGood === 'false') {
-      filtered = filtered.filter(token => token.isCirculatingSupplyGood === false);
-    }
-    if (filters.minLiquidityScore) {
-      const min = parseFloat(filters.minLiquidityScore);
-      filtered = filtered.filter(token => token.liquidityScore !== undefined && token.liquidityScore >= min);
-    }
-    if (filters.maxPumpDumpRiskScore) {
-      const max = parseFloat(filters.maxPumpDumpRiskScore);
-      filtered = filtered.filter(token => token.pumpDumpRiskScore !== undefined && token.pumpDumpRiskScore <= max);
-    }
-    if (filters.minWalletDistributionScore) {
-      const min = parseFloat(filters.minWalletDistributionScore);
-      filtered = filtered.filter(token => token.walletDistributionScore !== undefined && token.walletDistributionScore >= min);
-    }
-
-    setFilteredTokens(filtered);
     setStoreFilters(filters);
-  };
+    applyFilters();
+  }, [filters, setStoreFilters, applyFilters]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;

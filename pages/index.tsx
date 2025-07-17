@@ -1,19 +1,16 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import BottomNav from '../components/BottomNav';
 import TokenTable from '../components/TokenTable';
 import { useTokenStore } from '../stores/useTokenStore';
 import { useTokenData } from '../hooks/useTokenData';
-import TabbedFilters from '../components/TabbedFilters';
 import AnalyticsDashboard from '../components/AnalyticsDashboard';
 import AdvancedFilters from '../components/AdvancedFilters';
 import TokenAnalyticsCard from '../components/TokenAnalyticsCard';
-import { FaThLarge, FaList } from 'react-icons/fa';
+import { FaThLarge, FaList, FaSearch, FaChartBar, FaEye, FaEyeSlash } from 'react-icons/fa';
 
 export default function Home() {
-  const { loading, error, fetchTokens, searchQuery, sortConfig, filters, activeTab, setFilteredTokens, tokens, filteredTokens } =
-    useTokenStore();
+  const { loading, error, fetchTokens, searchQuery, setSearchQuery, tokens, filteredTokens, applyFilters } = useTokenStore();
   const { fetchTokens: fetchData } = useTokenData();
-  const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
   const [showDashboard, setShowDashboard] = useState(true);
 
@@ -21,106 +18,66 @@ export default function Home() {
     fetchData();
   }, [fetchData]);
 
+  // Apply filters whenever search query or tokens change
   useEffect(() => {
-    let filtered = [...tokens];
+    applyFilters();
+  }, [searchQuery, tokens, applyFilters]);
 
-    // Apply search
-    if (searchQuery) {
-      filtered = filtered.filter(
-        token =>
-          token.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          token.symbol.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-    }
-
-    // Apply tab filter
-    if (activeTab !== 'all') {
-      filtered = filtered.filter(token => token.category.toLowerCase() === activeTab);
-    }
-
-    // Apply filters
-    if (filters.category) {
-      filtered = filtered.filter(token => token.category === filters.category);
-    }
-    if (filters.minPrice) {
-      const min = parseFloat(filters.minPrice);
-      filtered = filtered.filter(token => token.price !== undefined && token.price >= min);
-    }
-    if (filters.maxPrice) {
-      const max = parseFloat(filters.maxPrice);
-      filtered = filtered.filter(token => token.price !== undefined && token.price <= max);
-    }
-    if (filters.minVolumeMarketCapRatio) {
-      const min = parseFloat(filters.minVolumeMarketCapRatio) / 100;
-      filtered = filtered.filter(token => token.volumeMarketCapRatio !== undefined && token.volumeMarketCapRatio >= min);
-    }
-    if (filters.maxVolumeMarketCapRatio) {
-      const max = parseFloat(filters.maxVolumeMarketCapRatio) / 100;
-      filtered = filtered.filter(token => token.volumeMarketCapRatio !== undefined && token.volumeMarketCapRatio <= max);
-    }
-    if (filters.minCirculatingSupplyPercentage) {
-      const min = parseFloat(filters.minCirculatingSupplyPercentage);
-      filtered = filtered.filter(
-        token => token.circulatingSupplyPercentage !== undefined && token.circulatingSupplyPercentage >= min
-      );
-    }
-    if (filters.maxCirculatingSupplyPercentage) {
-      const max = parseFloat(filters.maxCirculatingSupplyPercentage);
-      filtered = filtered.filter(
-        token => token.circulatingSupplyPercentage !== undefined && token.circulatingSupplyPercentage <= max
-      );
-    }
-    if (filters.isVolumeHealthy === 'true') {
-      filtered = filtered.filter(token => token.isVolumeHealthy === true);
-    } else if (filters.isVolumeHealthy === 'false') {
-      filtered = filtered.filter(token => token.isVolumeHealthy === false);
-    }
-    if (filters.isCirculatingSupplyGood === 'true') {
-      filtered = filtered.filter(token => token.isCirculatingSupplyGood === true);
-    } else if (filters.isCirculatingSupplyGood === 'false') {
-      filtered = filtered.filter(token => token.isCirculatingSupplyGood === false);
-    }
-
-    // Apply sorting
-    if (sortConfig) {
-      filtered = [...filtered].sort((a, b) => {
-        const aValue = a[sortConfig.key];
-        const bValue = b[sortConfig.key];
-        if (aValue === undefined || bValue === undefined) return 0;
-        if (sortConfig.direction === 'asc') {
-          return aValue > bValue ? 1 : -1;
-        }
-        return aValue < bValue ? 1 : -1;
-      });
-    }
-
-    setFilteredTokens(filtered);
-  }, [searchQuery, activeTab, filters, sortConfig, tokens, setFilteredTokens]);
-
-  const handleFilterClick = () => {
-    setIsFilterDrawerOpen(true);
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(e.target.value);
   };
 
-  const handleFilterClose = () => {
-    setIsFilterDrawerOpen(false);
-  };
+  // Calculate market overview metrics
+  const marketOverview = useMemo(() => {
+    if (!tokens.length) return null;
+
+    const totalMarketCap = tokens.reduce((sum, token) => sum + (token.marketCap || 0), 0);
+    const totalVolume = tokens.reduce((sum, token) => sum + (token.volume24h || 0), 0);
+    const healthyTokens = tokens.filter(token => token.isVolumeHealthy).length;
+    const highRiskTokens = tokens.filter(token => (token.pumpDumpRiskScore || 0) > 70).length;
+    const avgVolMktCapRatio = tokens.reduce((sum, token) => sum + (token.volumeMarketCapRatio || 0), 0) / tokens.length;
+
+    return {
+      totalMarketCap,
+      totalVolume,
+      healthyTokens,
+      highRiskTokens,
+      avgVolMktCapRatio,
+      totalTokens: tokens.length,
+      healthyPercentage: (healthyTokens / tokens.length) * 100,
+      riskPercentage: (highRiskTokens / tokens.length) * 100,
+    };
+  }, [tokens]);
 
   return (
     <div className="min-h-screen flex flex-col pb-safe-area-inset-bottom bg-gray-900 text-white">
       <main className="flex-1 p-4">
-        <div className="flex justify-between items-center mb-4">
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-yellow-400 to-yellow-600 bg-clip-text text-transparent">
-            Sunnalytics Market
-          </h1>
-          <div className="flex items-center space-x-4">
+        {/* Header */}
+        <div className="flex justify-between items-center mb-6">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-yellow-400 to-yellow-600 bg-clip-text text-transparent">
+              Sunnalytics
+            </h1>
+            <p className="text-sm text-gray-400 mt-1">Blockchain Analytics Platform</p>
+          </div>
+          <div className="flex items-center space-x-2">
+            {/* Dashboard Toggle - Icon on mobile, text on desktop */}
             <button
               onClick={() => setShowDashboard(!showDashboard)}
-              className={`text-sm px-3 py-1 rounded transition-colors ${
+              className={`p-2 md:px-3 md:py-1 rounded transition-colors ${
                 showDashboard ? 'bg-yellow-500 text-black' : 'bg-gray-700 text-gray-300'
               }`}
+              title={showDashboard ? 'Hide Dashboard' : 'Show Dashboard'}
             >
-              {showDashboard ? 'Hide' : 'Show'} Dashboard
+              <span className="md:hidden">
+                {showDashboard ? <FaEyeSlash /> : <FaEye />}
+              </span>
+              <span className="hidden md:inline flex items-center">
+                <FaChartBar className="mr-2" />
+                {showDashboard ? 'Hide' : 'Show'} Dashboard
+              </span>
             </button>
+            {/* View Mode Toggle */}
             <div className="flex bg-gray-700 rounded-lg p-1">
               <button
                 onClick={() => setViewMode('table')}
@@ -144,16 +101,61 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Analytics Dashboard */}
+        {/* Market Overview Summary - Always visible when data is loaded */}
+        {!loading && !error && marketOverview && (
+          <div className="bg-gray-800 rounded-lg p-4 mb-6">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div>
+                <p className="text-xs text-gray-400">Total Market Cap</p>
+                <p className="text-lg font-bold text-blue-400">
+                  ${(marketOverview.totalMarketCap / 1e9).toFixed(2)}B
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-400">24h Volume</p>
+                <p className="text-lg font-bold text-green-400">
+                  ${(marketOverview.totalVolume / 1e9).toFixed(2)}B
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-400">Healthy Tokens</p>
+                <p className="text-lg font-bold text-green-400">
+                  {marketOverview.healthyPercentage.toFixed(0)}%
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-400">High Risk</p>
+                <p className="text-lg font-bold text-red-400">
+                  {marketOverview.riskPercentage.toFixed(0)}%
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Search Bar */}
+        <div className="relative mb-6">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <FaSearch className="h-5 w-5 text-gray-400" />
+          </div>
+          <input
+            type="text"
+            placeholder="Search tokens by name or symbol..."
+            value={searchQuery}
+            onChange={handleSearchChange}
+            className="w-full pl-10 pr-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
+          />
+        </div>
+
+        {/* Detailed Analytics Dashboard */}
         {showDashboard && !loading && !error && tokens.length > 0 && (
-          <AnalyticsDashboard />
+          <div className="mb-6">
+            <AnalyticsDashboard />
+          </div>
         )}
 
         {/* Advanced Filters */}
         <AdvancedFilters isCompact={true} />
-
-        {/* Tabbed Filters */}
-        <TabbedFilters />
 
         {/* Loading and Error States */}
         {loading && (
@@ -175,14 +177,20 @@ export default function Home() {
         {/* Token Display */}
         {!loading && !error && (
           <>
+            <div className="mb-4">
+              <h2 className="text-lg font-semibold text-gray-300">
+                {filteredTokens.length} Tokens
+                {searchQuery && ` matching "${searchQuery}"`}
+              </h2>
+            </div>
             {viewMode === 'table' ? (
               <TokenTable
-                isFilterDrawerOpen={isFilterDrawerOpen}
-                onFilterClick={handleFilterClick}
-                onFilterClose={handleFilterClose}
+                isFilterDrawerOpen={false}
+                onFilterClick={() => {}}
+                onFilterClose={() => {}}
               />
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mt-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                 {filteredTokens.map(token => (
                   <TokenAnalyticsCard key={token.id} token={token} />
                 ))}
@@ -191,7 +199,7 @@ export default function Home() {
           </>
         )}
       </main>
-      <BottomNav onFilterClick={handleFilterClick} onSearchFocus={() => document.querySelector('input')?.focus()} />
+      <BottomNav onFilterClick={() => {}} onSearchFocus={() => document.querySelector('input')?.focus()} />
     </div>
   );
 }
