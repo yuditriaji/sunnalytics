@@ -7,9 +7,17 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "format": "prettier --write \"**/*.{ts,tsx,js,jsx}\""
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx}\"",
+    "build:mobile": "CAPACITOR_BUILD=true next build",
+    "cap:sync": "npx cap sync",
+    "cap:ios": "npm run build:mobile && npx cap sync ios && npx cap open ios",
+    "cap:android": "npm run build:mobile && npx cap sync android && npx cap open android"
   },
   "dependencies": {
+    "@capacitor/android": "^8.0.0",
+    "@capacitor/cli": "^8.0.0",
+    "@capacitor/core": "^8.0.0",
+    "@capacitor/ios": "^8.0.0",
     "@clerk/nextjs": "^6.36.5",
     "chart.js": "^4.4.9",
     "chartjs-adapter-date-fns": "^3.0.0",
