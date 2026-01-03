@@ -6,6 +6,7 @@ import 'chartjs-adapter-date-fns';
 import { useTokens } from '../../utils/api';
 import BottomNav from '../../components/BottomNav';
 import RiskIndicator from '../../components/RiskIndicator';
+import RiskDashboard from '../../components/RiskDashboard';
 import { formatLargeNumber as formatNumber } from '../../utils/tokenStats';
 import { FaChartLine, FaShieldAlt, FaChartBar, FaInfoCircle, FaExclamationTriangle, FaCheckCircle, FaTachometerAlt, FaChartPie } from 'react-icons/fa';
 
@@ -179,7 +180,7 @@ const TokenDetails: React.FC = () => {
 
   const PriceAnalyticsTab = () => {
     // Calculate volume/market cap ratio for each historical point
-    const volMktCapRatioHistory = validHistory.map(h => 
+    const volMktCapRatioHistory = validHistory.map(h =>
       h.marketCap && h.marketCap > 0 ? (h.volume24h! / h.marketCap) * 100 : 0
     );
 
@@ -225,8 +226,8 @@ const TokenDetails: React.FC = () => {
           position: 'left',
           grid: { color: 'rgba(255, 255, 255, 0.1)' },
           ticks: { color: '#3B82F6' },
-          title: { 
-            display: true, 
+          title: {
+            display: true,
             text: 'Price (USD)',
             color: '#3B82F6'
           },
@@ -237,23 +238,23 @@ const TokenDetails: React.FC = () => {
           position: 'right',
           grid: { drawOnChartArea: false },
           ticks: { color: '#F59E0B' },
-          title: { 
-            display: true, 
+          title: {
+            display: true,
             text: 'Vol/Mkt Cap Ratio (%)',
             color: '#F59E0B'
           },
         },
       },
       plugins: {
-        legend: { 
+        legend: {
           display: true,
           labels: { color: 'white' }
         },
-        tooltip: { 
-          mode: 'index', 
+        tooltip: {
+          mode: 'index',
           intersect: false,
           callbacks: {
-            label: function(context) {
+            label: function (context) {
               let label = context.dataset.label || '';
               if (label) {
                 label += ': ';
@@ -440,105 +441,14 @@ const TokenDetails: React.FC = () => {
   };
 
   const RiskAssessmentTab = () => {
-    const riskData = {
-      labels: ['Pump/Dump Risk', 'Liquidity', 'Wallet Distribution'],
-      datasets: [
-        {
-          data: [
-            token.pumpDumpRiskScore || 0,
-            100 - (token.liquidityScore || 0),
-            100 - (token.walletDistributionScore || 0),
-          ],
-          backgroundColor: ['#EF4444', '#F59E0B', '#10B981'],
-          borderWidth: 0,
-        },
-      ],
-    };
-
-    const riskChartOptions: ChartOptions<'doughnut'> = {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: {
-          position: 'bottom',
-          labels: { color: 'white' },
-        },
-      },
-    };
-
     return (
-      <div className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="bg-gray-800 p-6 rounded-lg">
-            <h3 className="text-lg font-semibold mb-4">Risk Distribution</h3>
-            <div className="h-64">
-              <Doughnut data={riskData} options={riskChartOptions} />
-            </div>
-          </div>
-
-          <div className="bg-gray-800 p-6 rounded-lg">
-            <h3 className="text-lg font-semibold mb-4">Risk Metrics</h3>
-            <div className="space-y-4">
-              <div>
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-gray-400">Pump/Dump Risk</span>
-                  <span className={`font-medium ${(token.pumpDumpRiskScore || 0) > 60 ? 'text-red-400' : (token.pumpDumpRiskScore || 0) > 30 ? 'text-yellow-400' : 'text-green-400'}`}>
-                    {token.pumpDumpRiskScore?.toFixed(0) || 0}%
-                  </span>
-                </div>
-                <div className="w-full bg-gray-700 rounded-full h-2">
-                  <div
-                    className={`h-2 rounded-full ${(token.pumpDumpRiskScore || 0) > 60 ? 'bg-red-400' : (token.pumpDumpRiskScore || 0) > 30 ? 'bg-yellow-400' : 'bg-green-400'}`}
-                    style={{ width: `${token.pumpDumpRiskScore || 0}%` }}
-                  ></div>
-                </div>
-              </div>
-
-              <div>
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-gray-400">Liquidity Score</span>
-                  <span className={`font-medium ${(token.liquidityScore || 0) < 40 ? 'text-red-400' : (token.liquidityScore || 0) < 70 ? 'text-yellow-400' : 'text-green-400'}`}>
-                    {token.liquidityScore?.toFixed(0) || 0}%
-                  </span>
-                </div>
-                <div className="w-full bg-gray-700 rounded-full h-2">
-                  <div
-                    className={`h-2 rounded-full ${(token.liquidityScore || 0) < 40 ? 'bg-red-400' : (token.liquidityScore || 0) < 70 ? 'bg-yellow-400' : 'bg-green-400'}`}
-                    style={{ width: `${token.liquidityScore || 0}%` }}
-                  ></div>
-                </div>
-              </div>
-
-              <div>
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-gray-400">Wallet Distribution</span>
-                  <span className={`font-medium ${(token.walletDistributionScore || 0) < 40 ? 'text-red-400' : (token.walletDistributionScore || 0) < 70 ? 'text-yellow-400' : 'text-green-400'}`}>
-                    {token.walletDistributionScore?.toFixed(0) || 0}%
-                  </span>
-                </div>
-                <div className="w-full bg-gray-700 rounded-full h-2">
-                  <div
-                    className={`h-2 rounded-full ${(token.walletDistributionScore || 0) < 40 ? 'bg-red-400' : (token.walletDistributionScore || 0) < 70 ? 'bg-yellow-400' : 'bg-green-400'}`}
-                    style={{ width: `${token.walletDistributionScore || 0}%` }}
-                  ></div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-gray-800 p-6 rounded-lg">
-          <h3 className="text-lg font-semibold mb-4">Risk Analysis</h3>
-          <RiskIndicator
-            pumpDumpRiskScore={token.pumpDumpRiskScore}
-            liquidityScore={token.liquidityScore}
-            walletDistributionScore={token.walletDistributionScore}
-            isVolumeHealthy={token.isVolumeHealthy}
-            volumeMarketCapRatio={token.volumeMarketCapRatio}
-            compact={false}
-          />
-        </div>
-      </div>
+      <RiskDashboard
+        pumpDumpRiskScore={token.pumpDumpRiskScore}
+        liquidityScore={token.liquidityScore}
+        walletDistributionScore={token.walletDistributionScore}
+        isVolumeHealthy={token.isVolumeHealthy}
+        volumeMarketCapRatio={token.volumeMarketCapRatio}
+      />
     );
   };
 
@@ -638,11 +548,10 @@ const TokenDetails: React.FC = () => {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
-              className={`flex items-center space-x-2 px-6 py-3 text-sm font-medium transition-colors ${
-                activeTab === tab.id
+              className={`flex items-center space-x-2 px-6 py-3 text-sm font-medium transition-colors ${activeTab === tab.id
                   ? 'text-yellow-400 border-b-2 border-yellow-400'
                   : 'text-gray-400 hover:text-white'
-              }`}
+                }`}
             >
               {tab.icon}
               <span>{tab.label}</span>
@@ -659,7 +568,7 @@ const TokenDetails: React.FC = () => {
         {activeTab === 'market' && <MarketHealthTab />}
       </main>
 
-      <BottomNav onFilterClick={() => {}} />
+      <BottomNav onFilterClick={() => { }} />
     </div>
   );
 };
