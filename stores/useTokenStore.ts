@@ -8,6 +8,8 @@ interface Token {
   symbol: string;
   exchange: string;
   category: string;
+  chain?: string;
+  contractAddress?: string;
   marketCap?: number;
   volume24h?: number;
   price?: number;

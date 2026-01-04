@@ -13,6 +13,8 @@ interface Token {
   symbol: string;
   category: string;
   exchange: string;
+  chain?: string;
+  contractAddress?: string;
   price?: number;
   marketCap?: number;
   volume24h?: number;
@@ -36,6 +38,7 @@ interface Token {
 type SortKey =
   | 'symbol'
   | 'exchange'
+  | 'chain'
   | 'price'
   | 'volume24h'
   | 'marketCap'
@@ -142,8 +145,8 @@ const TokenTable: React.FC<TokenTableProps> = memo(({ isFilterDrawerOpen, onFilt
           : Number(bBool) - Number(aBool);
       }
 
-      // Handle string values (symbol, exchange)
-      if (key === 'symbol' || key === 'exchange') {
+      // Handle string values (symbol, exchange, chain)
+      if (key === 'symbol' || key === 'exchange' || key === 'chain') {
         const aStr = (aValue as string) || '';
         const bStr = (bValue as string) || '';
         return sortConfig.direction === 'asc'
@@ -162,6 +165,7 @@ const TokenTable: React.FC<TokenTableProps> = memo(({ isFilterDrawerOpen, onFilt
 
   const columns = [
     'symbol',
+    'chain',
     'exchange',
     'price',
     'volume24h',
@@ -189,7 +193,7 @@ const TokenTable: React.FC<TokenTableProps> = memo(({ isFilterDrawerOpen, onFilt
 
   const getScoreColor = (score: number | undefined, type: 'liquidity' | 'risk' | 'distribution') => {
     if (score === undefined) return 'text-gray-400';
-    
+
     if (type === 'risk') {
       // For risk, lower is better
       if (score <= 30) return 'text-green-400';
@@ -221,7 +225,7 @@ const TokenTable: React.FC<TokenTableProps> = memo(({ isFilterDrawerOpen, onFilt
   const Row = ({ index, style }: { index: number; style: React.CSSProperties }) => {
     const token = sortedTokens[index];
     const isInWatchlist = watchlist.some(w => w.id === token.id);
-    
+
     return (
       <div
         style={style}
@@ -230,8 +234,8 @@ const TokenTable: React.FC<TokenTableProps> = memo(({ isFilterDrawerOpen, onFilt
         aria-label={`Token ${token.symbol}`}
         onClick={(e) => {
           // Don't navigate if clicking on buttons
-          if ((e.target as HTMLElement).tagName !== 'BUTTON' && 
-              !(e.target as HTMLElement).closest('button')) {
+          if ((e.target as HTMLElement).tagName !== 'BUTTON' &&
+            !(e.target as HTMLElement).closest('button')) {
             router.push(`/tokens/${token.id}`);
           }
         }}
@@ -242,9 +246,8 @@ const TokenTable: React.FC<TokenTableProps> = memo(({ isFilterDrawerOpen, onFilt
             e.stopPropagation();
             addToWatchlist(token);
           }}
-          className={`p-1 rounded transition-colors ${
-            isInWatchlist ? 'text-yellow-400' : 'text-gray-500 hover:text-yellow-400'
-          }`}
+          className={`p-1 rounded transition-colors ${isInWatchlist ? 'text-yellow-400' : 'text-gray-500 hover:text-yellow-400'
+            }`}
           title={isInWatchlist ? 'Remove from watchlist' : 'Add to watchlist'}
         >
           <FaStar className="w-4 h-4" />
@@ -274,6 +277,14 @@ const TokenTable: React.FC<TokenTableProps> = memo(({ isFilterDrawerOpen, onFilt
                   </span>
                 )}
               </div>
+            ) : col === 'chain' ? (
+              <span className={`text-xs px-2 py-1 rounded capitalize ${token.chain === 'ethereum' ? 'bg-blue-900 text-blue-300' :
+                token.chain === 'solana' ? 'bg-purple-900 text-purple-300' :
+                  token.chain === 'bsc' ? 'bg-yellow-900 text-yellow-300' :
+                    token.chain === 'arbitrum' ? 'bg-cyan-900 text-cyan-300' :
+                      token.chain === 'base' ? 'bg-indigo-900 text-indigo-300' :
+                        'bg-gray-700 text-gray-300'
+                }`}>{token.chain || '-'}</span>
             ) : col === 'exchange' ? (
               <span className="text-xs bg-gray-700 px-2 py-1 rounded">{token.exchange || 'N/A'}</span>
             ) : col === 'price' ? (
@@ -395,6 +406,9 @@ const TokenTable: React.FC<TokenTableProps> = memo(({ isFilterDrawerOpen, onFilt
               {columns.includes('symbol') && (
                 <th className="w-24 px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Symbol</th>
               )}
+              {columns.includes('chain') && (
+                <th className="w-20 px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Chain</th>
+              )}
               {columns.includes('exchange') && (
                 <th className="w-24 px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Exchange</th>
               )}
@@ -433,8 +447,8 @@ const TokenTable: React.FC<TokenTableProps> = memo(({ isFilterDrawerOpen, onFilt
                   key={token.id}
                   className="hover:bg-gray-700 transition-colors cursor-pointer"
                   onClick={(e) => {
-                    if ((e.target as HTMLElement).tagName !== 'BUTTON' && 
-                        !(e.target as HTMLElement).closest('button')) {
+                    if ((e.target as HTMLElement).tagName !== 'BUTTON' &&
+                      !(e.target as HTMLElement).closest('button')) {
                       router.push(`/tokens/${token.id}`);
                     }
                   }}
@@ -445,9 +459,8 @@ const TokenTable: React.FC<TokenTableProps> = memo(({ isFilterDrawerOpen, onFilt
                         e.stopPropagation();
                         addToWatchlist(token);
                       }}
-                      className={`p-1 rounded transition-colors ${
-                        isInWatchlist ? 'text-yellow-400' : 'text-gray-500 hover:text-yellow-400'
-                      }`}
+                      className={`p-1 rounded transition-colors ${isInWatchlist ? 'text-yellow-400' : 'text-gray-500 hover:text-yellow-400'
+                        }`}
                       title={isInWatchlist ? 'Remove from watchlist' : 'Add to watchlist'}
                     >
                       <FaStar className="w-4 h-4" />
@@ -474,6 +487,17 @@ const TokenTable: React.FC<TokenTableProps> = memo(({ isFilterDrawerOpen, onFilt
                           </span>
                         )}
                       </div>
+                    </td>
+                  )}
+                  {columns.includes('chain') && (
+                    <td className="px-4 py-3 text-sm">
+                      <span className={`text-xs px-2 py-1 rounded capitalize ${token.chain === 'ethereum' ? 'bg-blue-900 text-blue-300' :
+                        token.chain === 'solana' ? 'bg-purple-900 text-purple-300' :
+                          token.chain === 'bsc' ? 'bg-yellow-900 text-yellow-300' :
+                            token.chain === 'arbitrum' ? 'bg-cyan-900 text-cyan-300' :
+                              token.chain === 'base' ? 'bg-indigo-900 text-indigo-300' :
+                                'bg-gray-700 text-gray-300'
+                        }`}>{token.chain || '-'}</span>
                     </td>
                   )}
                   {columns.includes('exchange') && (
@@ -565,6 +589,7 @@ const TokenTable: React.FC<TokenTableProps> = memo(({ isFilterDrawerOpen, onFilt
             <h2 className="text-lg font-bold text-white mb-4">Customize Table Columns</h2>
             {[
               'symbol',
+              'chain',
               'exchange',
               'price',
               'volume24h',
@@ -585,13 +610,14 @@ const TokenTable: React.FC<TokenTableProps> = memo(({ isFilterDrawerOpen, onFilt
                   aria-label={`Toggle ${key} column`}
                 />
                 <label htmlFor={`column-${key}`} className="text-white">
-                  {key === 'symbol' ? 'Symbol' : 
-                   key === 'exchange' ? 'Exchange' :
-                   key === 'volumeMarketCapRatio' ? 'Vol/Mkt Cap Ratio' : 
-                   key === 'isVolumeHealthy' ? 'Health' : 
-                   key === 'pumpDumpRiskScore' ? 'Pump/Dump Risk' : 
-                   key === 'walletDistributionScore' ? 'Wallet Dist Score' : 
-                   key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1')}
+                  {key === 'symbol' ? 'Symbol' :
+                    key === 'chain' ? 'Chain' :
+                      key === 'exchange' ? 'Exchange' :
+                        key === 'volumeMarketCapRatio' ? 'Vol/Mkt Cap Ratio' :
+                          key === 'isVolumeHealthy' ? 'Health' :
+                            key === 'pumpDumpRiskScore' ? 'Pump/Dump Risk' :
+                              key === 'walletDistributionScore' ? 'Wallet Dist Score' :
+                                key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1')}
                 </label>
               </div>
             ))}
@@ -617,6 +643,7 @@ const TokenTable: React.FC<TokenTableProps> = memo(({ isFilterDrawerOpen, onFilt
               'pumpDumpRiskScore',
               'liquidityScore',
               'walletDistributionScore',
+              'chain',
               'exchange',
             ] as SortKey[]).map(key => (
               <div key={key} className="mb-2">
@@ -625,12 +652,13 @@ const TokenTable: React.FC<TokenTableProps> = memo(({ isFilterDrawerOpen, onFilt
                   className="w-full text-left p-2 bg-gray-700 rounded hover:bg-gray-600 text-white flex justify-between focus:outline-none focus:ring-2 focus:ring-blue-500"
                   aria-label={`Sort by ${key}`}
                 >
-                  <span>{key === 'volumeMarketCapRatio' ? 'Vol/Mkt Cap Ratio' : 
-                         key === 'isVolumeHealthy' ? 'Health' : 
-                         key === 'pumpDumpRiskScore' ? 'Pump/Dump Risk' : 
-                         key === 'walletDistributionScore' ? 'Wallet Dist Score' : 
-                         key === 'exchange' ? 'Exchange' :
-                         key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1')}</span>
+                  <span>{key === 'volumeMarketCapRatio' ? 'Vol/Mkt Cap Ratio' :
+                    key === 'isVolumeHealthy' ? 'Health' :
+                      key === 'pumpDumpRiskScore' ? 'Pump/Dump Risk' :
+                        key === 'walletDistributionScore' ? 'Wallet Dist Score' :
+                          key === 'chain' ? 'Chain' :
+                            key === 'exchange' ? 'Exchange' :
+                              key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1')}</span>
                   <span>{sortConfig?.key === key ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}</span>
                 </button>
               </div>
