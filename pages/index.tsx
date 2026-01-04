@@ -3,22 +3,21 @@ import BottomNav from '../components/BottomNav';
 import TokenTable from '../components/TokenTable';
 import { useTokenStore } from '../stores/useTokenStore';
 import { useTokenData } from '../hooks/useTokenData';
-import AnalyticsDashboard from '../components/AnalyticsDashboard';
-import AdvancedFilters from '../components/AdvancedFilters';
+import DashboardHeader from '../components/DashboardHeader';
+import StatsCard from '../components/StatsCard';
+import TrendingTokens from '../components/TrendingTokens';
 import TokenAnalyticsCard from '../components/TokenAnalyticsCard';
-import { FaThLarge, FaList, FaSearch, FaChartBar, FaEye, FaEyeSlash } from 'react-icons/fa';
+import { FaSearch, FaChartLine, FaDollarSign, FaShieldAlt, FaFire, FaThLarge, FaList } from 'react-icons/fa';
 
 export default function Home() {
   const { loading, error, fetchTokens, searchQuery, setSearchQuery, tokens, filteredTokens, applyFilters } = useTokenStore();
   const { fetchTokens: fetchData } = useTokenData();
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
-  const [showDashboard, setShowDashboard] = useState(true);
 
   useEffect(() => {
     fetchData();
   }, [fetchData]);
 
-  // Apply filters whenever search query or tokens change
   useEffect(() => {
     applyFilters();
   }, [searchQuery, tokens, applyFilters]);
@@ -27,171 +26,171 @@ export default function Home() {
     setSearchQuery(e.target.value);
   };
 
-  // Calculate market overview metrics
-  const marketOverview = useMemo(() => {
+  // Market metrics
+  const marketMetrics = useMemo(() => {
     if (!tokens.length) return null;
 
-    const totalMarketCap = tokens.reduce((sum, token) => sum + (token.marketCap || 0), 0);
-    const totalVolume = tokens.reduce((sum, token) => sum + (token.volume24h || 0), 0);
-    const healthyTokens = tokens.filter(token => token.isVolumeHealthy).length;
-    const highRiskTokens = tokens.filter(token => (token.pumpDumpRiskScore || 0) > 70).length;
-    const avgVolMktCapRatio = tokens.reduce((sum, token) => sum + (token.volumeMarketCapRatio || 0), 0) / tokens.length;
+    const totalMarketCap = tokens.reduce((sum, t) => sum + (t.marketCap || 0), 0);
+    const totalVolume = tokens.reduce((sum, t) => sum + (t.volume24h || 0), 0);
+    const healthyCount = tokens.filter(t => t.isVolumeHealthy).length;
+    const highRiskCount = tokens.filter(t => (t.pumpDumpRiskScore || 0) > 70).length;
 
     return {
       totalMarketCap,
       totalVolume,
-      healthyTokens,
-      highRiskTokens,
-      avgVolMktCapRatio,
-      totalTokens: tokens.length,
-      healthyPercentage: (healthyTokens / tokens.length) * 100,
-      riskPercentage: (highRiskTokens / tokens.length) * 100,
+      healthyPercent: (healthyCount / tokens.length) * 100,
+      riskPercent: (highRiskCount / tokens.length) * 100,
     };
   }, [tokens]);
 
-  return (
-    <div className="min-h-screen flex flex-col pb-safe-area-inset-bottom bg-gray-900 text-white">
-      <main className="flex-1 p-4">
-        {/* Header */}
-        <div className="flex justify-between items-center mb-6">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-yellow-400 to-yellow-600 bg-clip-text text-transparent">
-              Sunnalytics
-            </h1>
-            <p className="text-sm text-gray-400 mt-1">Blockchain Analytics Platform</p>
-          </div>
-          <div className="flex items-center space-x-2">
-            {/* Dashboard Toggle - Icon on mobile, text on desktop */}
-            <button
-              onClick={() => setShowDashboard(!showDashboard)}
-              className={`p-2 md:px-3 md:py-1 rounded transition-colors ${
-                showDashboard ? 'bg-yellow-500 text-black' : 'bg-gray-700 text-gray-300'
-              }`}
-              title={showDashboard ? 'Hide Dashboard' : 'Show Dashboard'}
-            >
-              <span className="md:hidden">
-                {showDashboard ? <FaEyeSlash /> : <FaEye />}
-              </span>
-              <span className="hidden md:inline flex items-center">
-                <FaChartBar className="mr-2" />
-                {showDashboard ? 'Hide' : 'Show'} Dashboard
-              </span>
-            </button>
-            {/* View Mode Toggle */}
-            <div className="flex bg-gray-700 rounded-lg p-1">
-              <button
-                onClick={() => setViewMode('table')}
-                className={`p-2 rounded transition-colors ${
-                  viewMode === 'table' ? 'bg-yellow-500 text-black' : 'text-gray-400 hover:text-white'
-                }`}
-                title="Table View"
-              >
-                <FaList />
-              </button>
-              <button
-                onClick={() => setViewMode('cards')}
-                className={`p-2 rounded transition-colors ${
-                  viewMode === 'cards' ? 'bg-yellow-500 text-black' : 'text-gray-400 hover:text-white'
-                }`}
-                title="Card View"
-              >
-                <FaThLarge />
-              </button>
-            </div>
-          </div>
-        </div>
+  // Top movers
+  const topGainers = useMemo(() => {
+    return [...tokens]
+      .filter(t => t.stats?.priceChange24h !== undefined)
+      .sort((a, b) => (b.stats?.priceChange24h || 0) - (a.stats?.priceChange24h || 0))
+      .slice(0, 5)
+      .map(t => ({
+        ...t,
+        priceChange24h: t.stats?.priceChange24h,
+      }));
+  }, [tokens]);
 
-        {/* Market Overview Summary - Always visible when data is loaded */}
-        {!loading && !error && marketOverview && (
-          <div className="bg-gray-800 rounded-lg p-4 mb-6">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div>
-                <p className="text-xs text-gray-400">Total Market Cap</p>
-                <p className="text-lg font-bold text-blue-400">
-                  ${(marketOverview.totalMarketCap / 1e9).toFixed(2)}B
-                </p>
-              </div>
-              <div>
-                <p className="text-xs text-gray-400">24h Volume</p>
-                <p className="text-lg font-bold text-green-400">
-                  ${(marketOverview.totalVolume / 1e9).toFixed(2)}B
-                </p>
-              </div>
-              <div>
-                <p className="text-xs text-gray-400">Healthy Tokens</p>
-                <p className="text-lg font-bold text-green-400">
-                  {marketOverview.healthyPercentage.toFixed(0)}%
-                </p>
-              </div>
-              <div>
-                <p className="text-xs text-gray-400">High Risk</p>
-                <p className="text-lg font-bold text-red-400">
-                  {marketOverview.riskPercentage.toFixed(0)}%
-                </p>
-              </div>
-            </div>
+  const topLosers = useMemo(() => {
+    return [...tokens]
+      .filter(t => t.stats?.priceChange24h !== undefined)
+      .sort((a, b) => (a.stats?.priceChange24h || 0) - (b.stats?.priceChange24h || 0))
+      .slice(0, 5)
+      .map(t => ({
+        ...t,
+        priceChange24h: t.stats?.priceChange24h,
+      }));
+  }, [tokens]);
+
+  const formatNumber = (n: number) => {
+    if (n >= 1e12) return `$${(n / 1e12).toFixed(2)}T`;
+    if (n >= 1e9) return `$${(n / 1e9).toFixed(2)}B`;
+    if (n >= 1e6) return `$${(n / 1e6).toFixed(2)}M`;
+    return `$${n.toFixed(0)}`;
+  };
+
+  return (
+    <div className="min-h-screen flex flex-col bg-[#0a0a0a] text-white pb-20">
+      {/* Header */}
+      <DashboardHeader />
+
+      <main className="flex-1 px-4 pb-4">
+        {/* Stats Grid */}
+        {!loading && !error && marketMetrics && (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+            <StatsCard
+              title="Total Market Cap"
+              value={formatNumber(marketMetrics.totalMarketCap)}
+              icon={<FaChartLine className="w-4 h-4" />}
+              color="blue"
+            />
+            <StatsCard
+              title="24h Volume"
+              value={formatNumber(marketMetrics.totalVolume)}
+              icon={<FaDollarSign className="w-4 h-4" />}
+              color="green"
+            />
+            <StatsCard
+              title="Healthy Tokens"
+              value={`${marketMetrics.healthyPercent.toFixed(0)}%`}
+              icon={<FaShieldAlt className="w-4 h-4" />}
+              color="yellow"
+            />
+            <StatsCard
+              title="High Risk"
+              value={`${marketMetrics.riskPercent.toFixed(0)}%`}
+              icon={<FaFire className="w-4 h-4" />}
+              color="red"
+            />
           </div>
         )}
 
         {/* Search Bar */}
         <div className="relative mb-6">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <FaSearch className="h-5 w-5 text-gray-400" />
+          <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+            <FaSearch className="h-4 w-4 text-gray-500" />
           </div>
           <input
             type="text"
-            placeholder="Search tokens by name or symbol..."
+            placeholder="Search tokens..."
             value={searchQuery}
             onChange={handleSearchChange}
-            className="w-full pl-10 pr-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
+            className="w-full pl-11 pr-4 py-3.5 bg-gray-800/50 backdrop-blur-xl border border-gray-700/50 rounded-2xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-yellow-500/50 focus:border-yellow-500/50 transition-all"
           />
         </div>
 
-        {/* Detailed Analytics Dashboard */}
-        {showDashboard && !loading && !error && tokens.length > 0 && (
-          <div className="mb-6">
-            <AnalyticsDashboard />
+        {/* Trending Section (when not searching) */}
+        {!loading && !error && !searchQuery && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <TrendingTokens tokens={topGainers} title="Top Gainers" type="gainers" />
+            <TrendingTokens tokens={topLosers} title="Top Losers" type="losers" />
           </div>
         )}
 
-        {/* Advanced Filters */}
-        <AdvancedFilters isCompact={true} />
-
-        {/* Loading and Error States */}
+        {/* Loading */}
         {loading && (
-          <div className="text-center py-12">
-            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-400"></div>
-            <p className="mt-4 text-gray-400">Loading market data...</p>
+          <div className="text-center py-16">
+            <div className="inline-block animate-spin rounded-full h-10 w-10 border-2 border-yellow-500 border-t-transparent" />
+            <p className="mt-4 text-gray-500">Loading market data...</p>
           </div>
         )}
-        
+
+        {/* Error */}
         {error && (
-          <div className="text-center py-12">
-            <p className="text-red-500 mb-4">Error: {error}</p>
-            <button onClick={fetchTokens} className="px-4 py-2 bg-yellow-500 text-black rounded hover:bg-yellow-400 transition-colors">
+          <div className="text-center py-16">
+            <p className="text-red-400 mb-4">{error}</p>
+            <button
+              onClick={fetchTokens}
+              className="px-6 py-2 bg-yellow-500 text-black rounded-xl font-semibold hover:bg-yellow-400 transition-all"
+            >
               Retry
             </button>
           </div>
         )}
 
-        {/* Token Display */}
+        {/* Token List */}
         {!loading && !error && (
           <>
-            <div className="mb-4">
-              <h2 className="text-lg font-semibold text-gray-300">
+            {/* Header with view toggle */}
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold">
                 {filteredTokens.length} Tokens
-                {searchQuery && ` matching "${searchQuery}"`}
+                {searchQuery && <span className="text-gray-500"> matching "{searchQuery}"</span>}
               </h2>
+              <div className="flex bg-gray-800/50 rounded-xl p-1">
+                <button
+                  onClick={() => setViewMode('table')}
+                  className={`p-2 rounded-lg transition-all ${viewMode === 'table' ? 'bg-yellow-500 text-black' : 'text-gray-400 hover:text-white'
+                    }`}
+                >
+                  <FaList className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setViewMode('cards')}
+                  className={`p-2 rounded-lg transition-all ${viewMode === 'cards' ? 'bg-yellow-500 text-black' : 'text-gray-400 hover:text-white'
+                    }`}
+                >
+                  <FaThLarge className="w-4 h-4" />
+                </button>
+              </div>
             </div>
+
+            {/* Token Display */}
             {viewMode === 'table' ? (
-              <TokenTable
-                isFilterDrawerOpen={false}
-                onFilterClick={() => {}}
-                onFilterClose={() => {}}
-              />
+              <div className="bg-gray-800/30 backdrop-blur-xl border border-gray-700/30 rounded-2xl overflow-hidden">
+                <TokenTable
+                  isFilterDrawerOpen={false}
+                  onFilterClick={() => { }}
+                  onFilterClose={() => { }}
+                />
+              </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                {filteredTokens.map(token => (
+                {filteredTokens.map((token) => (
                   <TokenAnalyticsCard key={token.id} token={token} />
                 ))}
               </div>
@@ -199,7 +198,8 @@ export default function Home() {
           </>
         )}
       </main>
-      <BottomNav onFilterClick={() => {}} onSearchFocus={() => document.querySelector('input')?.focus()} />
+
+      <BottomNav onFilterClick={() => { }} onSearchFocus={() => document.querySelector('input')?.focus()} />
     </div>
   );
 }
