@@ -1,15 +1,10 @@
-/**
- * Settings Page
- * 
- * User settings, subscription management, and preferences.
- */
-
-import { useUser, SignedIn, SignedOut, RedirectToSignIn, UserProfile } from '@clerk/nextjs';
+import { useUser, SignedIn, SignedOut, RedirectToSignIn } from '@clerk/nextjs';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
-import Header from '../components/Header';
 import BottomNav from '../components/BottomNav';
-import { FaUser, FaCrown, FaBell, FaTelegram, FaCheck, FaSpinner } from 'react-icons/fa';
+import Sidebar from '../components/Sidebar';
+import DashboardHeader from '../components/DashboardHeader';
+import { FiUser, FiCreditCard, FiBell, FiCheck, FiLoader, FiChevronRight } from 'react-icons/fi';
 
 interface SubscriptionStatus {
   tier: string;
@@ -19,21 +14,9 @@ interface SubscriptionStatus {
 }
 
 const TIER_FEATURES = {
-  free: {
-    name: 'Free',
-    price: '$0',
-    features: ['10 watchlist tokens', '3 price alerts', 'Basic analytics', '1h data refresh'],
-  },
-  pro: {
-    name: 'Pro',
-    price: '$29/mo',
-    features: ['100 watchlist tokens', '50 price alerts', 'Advanced analytics', '5min data refresh', 'Export data'],
-  },
-  whale: {
-    name: 'Whale',
-    price: '$99/mo',
-    features: ['Unlimited watchlist', 'Unlimited alerts', 'Real-time data', 'API access', 'Priority support'],
-  },
+  free: { name: 'Free', price: '$0', features: ['10 watchlist tokens', '3 price alerts', 'Basic analytics', '1h data refresh'] },
+  pro: { name: 'Pro', price: '$29/mo', features: ['100 watchlist tokens', '50 price alerts', 'Advanced analytics', '5min data refresh', 'Export data'] },
+  whale: { name: 'Whale', price: '$99/mo', features: ['Unlimited watchlist', 'Unlimited alerts', 'Real-time data', 'API access', 'Priority support'] },
 };
 
 export default function SettingsPage() {
@@ -42,204 +25,171 @@ export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<'account' | 'subscription' | 'notifications'>('account');
   const [subscription, setSubscription] = useState<SubscriptionStatus | null>(null);
   const [loading, setLoading] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   useEffect(() => {
     const tab = router.query.tab as string;
-    if (tab === 'subscription' || tab === 'notifications') {
-      setActiveTab(tab);
-    }
-    if (router.query.success === 'true') {
-      alert('Subscription updated successfully!');
-      router.replace('/settings?tab=subscription', undefined, { shallow: true });
-    }
+    if (tab === 'subscription' || tab === 'notifications') setActiveTab(tab);
   }, [router.query]);
 
   useEffect(() => {
-    if (isLoaded && user) {
-      fetchSubscription();
-    }
+    if (isLoaded && user) fetchSubscription();
   }, [isLoaded, user]);
 
   const fetchSubscription = async () => {
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/subscription/status`, {
-        credentials: 'include',
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setSubscription(data);
-      }
-    } catch (err) {
-      console.error('Failed to fetch subscription');
-    }
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/subscription/status`, { credentials: 'include' });
+      if (res.ok) setSubscription(await res.json());
+    } catch (err) { console.error('Failed to fetch subscription'); }
   };
 
   const handleUpgrade = async (tier: 'pro' | 'whale') => {
     setLoading(true);
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/subscription/create-checkout`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ tier }),
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ tier }),
       });
       const data = await res.json();
       if (data.url) window.location.href = data.url;
-    } catch (err) {
-      alert('Failed to start checkout');
-    } finally {
-      setLoading(false);
-    }
+    } catch { alert('Failed to start checkout'); } finally { setLoading(false); }
   };
 
   const handleManageSubscription = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/subscription/create-portal`, {
-        method: 'POST',
-        credentials: 'include',
-      });
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/subscription/create-portal`, { method: 'POST', credentials: 'include' });
       const data = await res.json();
       if (data.url) window.location.href = data.url;
-    } catch (err) {
-      alert('Failed to open billing portal');
-    } finally {
-      setLoading(false);
-    }
+    } catch { alert('Failed'); } finally { setLoading(false); }
   };
 
   const tabs = [
-    { id: 'account', label: 'Account', icon: <FaUser /> },
-    { id: 'subscription', label: 'Subscription', icon: <FaCrown /> },
-    { id: 'notifications', label: 'Notifications', icon: <FaBell /> },
+    { id: 'account' as const, label: 'Account', icon: FiUser },
+    { id: 'subscription' as const, label: 'Subscription', icon: FiCreditCard },
+    { id: 'notifications' as const, label: 'Notifications', icon: FiBell },
   ];
 
   return (
     <>
-      <SignedOut>
-        <RedirectToSignIn />
-      </SignedOut>
-
+      <SignedOut><RedirectToSignIn /></SignedOut>
       <SignedIn>
-        <div className="min-h-screen bg-gray-900 text-white pb-24">
-          <Header title="Settings" />
+        <div className="min-h-screen bg-[#0A0E17]">
+          <Sidebar collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed(!sidebarCollapsed)} />
 
-          <main className="pt-20 px-4 max-w-4xl mx-auto">
-            {/* Tabs */}
-            <div className="flex border-b border-gray-700 mb-6">
-              {tabs.map(tab => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id as any)}
-                  className={`flex items-center gap-2 px-4 py-3 text-sm font-medium transition-colors ${activeTab === tab.id
-                      ? 'text-yellow-500 border-b-2 border-yellow-500'
-                      : 'text-gray-400 hover:text-gray-200'
-                    }`}
-                >
-                  {tab.icon}
-                  {tab.label}
-                </button>
-              ))}
-            </div>
+          <div className={`min-h-screen transition-all duration-300 ${sidebarCollapsed ? 'lg:pl-16' : 'lg:pl-[200px]'} pb-20 lg:pb-0`}>
+            <DashboardHeader sidebarCollapsed={sidebarCollapsed} />
 
-            {/* Account Tab */}
-            {activeTab === 'account' && (
-              <div className="bg-gray-800 rounded-lg p-6">
-                <h2 className="text-xl font-bold mb-4">Account Settings</h2>
-                <UserProfile
-                  appearance={{
-                    elements: {
-                      card: 'bg-gray-800 border-none shadow-none',
-                      navbar: 'hidden',
-                      pageScrollBox: 'p-0',
-                    }
-                  }}
-                />
+            <main className="p-4 lg:p-6">
+              <h1 className="text-xl font-bold text-white mb-6">Settings</h1>
+
+              {/* Tabs */}
+              <div className="flex gap-1 mb-6 bg-[#111827] border border-white/5 rounded-xl p-1 w-fit">
+                {tabs.map(tab => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === tab.id ? 'bg-cyan-500 text-black' : 'text-gray-400 hover:text-white'
+                      }`}
+                  >
+                    <tab.icon className="w-4 h-4" />
+                    {tab.label}
+                  </button>
+                ))}
               </div>
-            )}
 
-            {/* Subscription Tab */}
-            {activeTab === 'subscription' && (
-              <div className="space-y-6">
-                <div className="bg-gray-800 rounded-lg p-6">
-                  <h2 className="text-xl font-bold mb-4">Current Plan</h2>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <span className="text-2xl font-bold capitalize">{subscription?.tier || 'Free'}</span>
-                      {subscription?.subscriptionEnd && (
-                        <p className="text-sm text-gray-400 mt-1">
-                          {subscription.cancelAtPeriodEnd ? 'Ends' : 'Renews'} on{' '}
-                          {new Date(subscription.subscriptionEnd).toLocaleDateString()}
-                        </p>
-                      )}
-                    </div>
-                    {subscription?.tier !== 'free' && (
-                      <button
-                        onClick={handleManageSubscription}
-                        disabled={loading}
-                        className="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600"
-                      >
-                        {loading ? <FaSpinner className="animate-spin" /> : 'Manage Billing'}
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                <div className="grid md:grid-cols-3 gap-4">
-                  {Object.entries(TIER_FEATURES).map(([tierId, tier]) => (
-                    <div
-                      key={tierId}
-                      className={`bg-gray-800 rounded-lg p-6 border-2 ${subscription?.tier === tierId ? 'border-yellow-500' : 'border-gray-700'
-                        }`}
-                    >
-                      <h3 className="text-lg font-bold">{tier.name}</h3>
-                      <p className="text-2xl font-bold text-yellow-500 mb-4">{tier.price}</p>
-                      <ul className="space-y-2 mb-6">
-                        {tier.features.map(f => (
-                          <li key={f} className="flex items-center gap-2 text-sm text-gray-300">
-                            <FaCheck className="text-green-500 text-xs" />{f}
-                          </li>
-                        ))}
-                      </ul>
-                      {subscription?.tier === tierId ? (
-                        <button disabled className="w-full py-2 bg-gray-700 text-gray-400 rounded-lg">Current</button>
-                      ) : tierId !== 'free' && (
-                        <button
-                          onClick={() => handleUpgrade(tierId as 'pro' | 'whale')}
-                          disabled={loading}
-                          className="w-full py-2 bg-yellow-500 text-gray-900 rounded-lg hover:bg-yellow-400 font-medium"
-                        >
-                          {loading ? <FaSpinner className="animate-spin mx-auto" /> : 'Upgrade'}
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Notifications Tab */}
-            {activeTab === 'notifications' && (
-              <div className="space-y-6">
-                <div className="bg-gray-800 rounded-lg p-6">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <FaTelegram className="text-2xl text-blue-400" />
+              {/* Account Tab */}
+              {activeTab === 'account' && (
+                <div className="bg-[#111827] border border-white/5 rounded-xl p-6">
+                  <h2 className="text-sm font-medium text-white mb-4">Account Information</h2>
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-4">
+                      <div className="w-16 h-16 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center overflow-hidden">
+                        {user?.imageUrl ? (
+                          <img src={user.imageUrl} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          <span className="text-white text-xl font-bold">{user?.firstName?.[0] || 'U'}</span>
+                        )}
+                      </div>
                       <div>
-                        <h3 className="font-medium">Telegram Notifications</h3>
-                        <p className="text-sm text-gray-400">Receive alerts via Telegram</p>
+                        <p className="text-white font-medium">{user?.fullName || 'User'}</p>
+                        <p className="text-sm text-gray-500">{user?.primaryEmailAddress?.emailAddress}</p>
                       </div>
                     </div>
-                    <button className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-400">
-                      Connect Telegram
+                    <button
+                      onClick={() => router.push('/user')}
+                      className="flex items-center justify-between w-full px-4 py-3 bg-white/5 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-white/10"
+                    >
+                      Manage Account <FiChevronRight />
                     </button>
                   </div>
                 </div>
-              </div>
-            )}
-          </main>
+              )}
 
-          <BottomNav />
+              {/* Subscription Tab */}
+              {activeTab === 'subscription' && (
+                <div className="space-y-4">
+                  {/* Current Plan */}
+                  <div className="bg-[#111827] border border-white/5 rounded-xl p-6">
+                    <h2 className="text-sm font-medium text-white mb-4">Current Plan</h2>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-2xl font-bold text-cyan-400 capitalize">{subscription?.tier || 'Free'}</p>
+                        <p className="text-sm text-gray-500">
+                          {subscription?.subscriptionEnd ? `Renews ${new Date(subscription.subscriptionEnd).toLocaleDateString()}` : 'No subscription'}
+                        </p>
+                      </div>
+                      {subscription?.tier !== 'free' && (
+                        <button onClick={handleManageSubscription} disabled={loading} className="px-4 py-2 bg-white/5 hover:bg-white/10 rounded-lg text-sm">
+                          Manage
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Plans */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {Object.entries(TIER_FEATURES).map(([key, tier]) => (
+                      <div key={key} className={`bg-[#111827] border rounded-xl p-4 ${subscription?.tier === key ? 'border-cyan-500' : 'border-white/5'}`}>
+                        <p className="text-lg font-bold text-white">{tier.name}</p>
+                        <p className="text-2xl font-bold text-cyan-400 mb-4">{tier.price}</p>
+                        <ul className="space-y-2 mb-4">
+                          {tier.features.map((f, i) => (
+                            <li key={i} className="flex items-center gap-2 text-sm text-gray-400">
+                              <FiCheck className="w-4 h-4 text-emerald-400" /> {f}
+                            </li>
+                          ))}
+                        </ul>
+                        {subscription?.tier === key ? (
+                          <div className="px-4 py-2 bg-cyan-500/10 text-cyan-400 text-center rounded-lg text-sm">Current Plan</div>
+                        ) : key !== 'free' && (
+                          <button onClick={() => handleUpgrade(key as 'pro' | 'whale')} disabled={loading} className="w-full px-4 py-2 bg-cyan-500 hover:bg-cyan-400 text-black font-semibold rounded-lg text-sm disabled:opacity-50">
+                            {loading ? <FiLoader className="w-4 h-4 animate-spin mx-auto" /> : 'Upgrade'}
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Notifications Tab */}
+              {activeTab === 'notifications' && (
+                <div className="bg-[#111827] border border-white/5 rounded-xl p-6">
+                  <h2 className="text-sm font-medium text-white mb-4">Notification Preferences</h2>
+                  <div className="space-y-4">
+                    {['Price Alerts', 'Watchlist Updates', 'News & Announcements', 'Weekly Reports'].map(item => (
+                      <div key={item} className="flex items-center justify-between px-4 py-3 bg-white/5 rounded-lg">
+                        <span className="text-sm text-gray-400">{item}</span>
+                        <input type="checkbox" defaultChecked className="w-5 h-5 accent-cyan-500" />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </main>
+          </div>
+
+          <div className="lg:hidden"><BottomNav /></div>
         </div>
       </SignedIn>
     </>
