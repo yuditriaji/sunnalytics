@@ -76,6 +76,13 @@ const TokenTable: React.FC<TokenTableProps> = memo(() => {
     riskLevel: '',
     minMarketCap: '',
     maxMarketCap: '',
+    minVolume: '',
+    maxVolume: '',
+    minPrice: '',
+    maxPrice: '',
+    volumeHealth: '',
+    minLiquidity: '',
+    minWalletDist: '',
   });
 
   // Get unique values for filter dropdowns
@@ -107,6 +114,34 @@ const TokenTable: React.FC<TokenTableProps> = memo(() => {
       if (filters.maxMarketCap) {
         const max = parseFloat(filters.maxMarketCap) * 1e6;
         if ((token.marketCap ?? 0) > max) return false;
+      }
+      if (filters.minVolume) {
+        const min = parseFloat(filters.minVolume) * 1e6;
+        if ((token.volume24h ?? 0) < min) return false;
+      }
+      if (filters.maxVolume) {
+        const max = parseFloat(filters.maxVolume) * 1e6;
+        if ((token.volume24h ?? 0) > max) return false;
+      }
+      if (filters.minPrice) {
+        const min = parseFloat(filters.minPrice);
+        if ((token.price ?? 0) < min) return false;
+      }
+      if (filters.maxPrice) {
+        const max = parseFloat(filters.maxPrice);
+        if ((token.price ?? 0) > max) return false;
+      }
+      if (filters.volumeHealth) {
+        if (filters.volumeHealth === 'healthy' && !token.isVolumeHealthy) return false;
+        if (filters.volumeHealth === 'unhealthy' && token.isVolumeHealthy !== false) return false;
+      }
+      if (filters.minLiquidity) {
+        const min = parseFloat(filters.minLiquidity);
+        if ((token.liquidityScore ?? 0) < min) return false;
+      }
+      if (filters.minWalletDist) {
+        const min = parseFloat(filters.minWalletDist);
+        if ((token.walletDistributionScore ?? 0) < min) return false;
       }
       return true;
     });
@@ -147,7 +182,7 @@ const TokenTable: React.FC<TokenTableProps> = memo(() => {
   };
 
   const clearFilters = () => {
-    setFilters({ chain: '', exchange: '', riskLevel: '', minMarketCap: '', maxMarketCap: '' });
+    setFilters({ chain: '', exchange: '', riskLevel: '', minMarketCap: '', maxMarketCap: '', minVolume: '', maxVolume: '', minPrice: '', maxPrice: '', volumeHealth: '', minLiquidity: '', minWalletDist: '' });
   };
 
   const activeFilterCount = Object.values(filters).filter(Boolean).length;
@@ -289,10 +324,9 @@ const TokenTable: React.FC<TokenTableProps> = memo(() => {
                 value={filters.minMarketCap}
                 onChange={(e) => setFilters(f => ({ ...f, minMarketCap: e.target.value }))}
                 placeholder="0"
-                className="w-24 h-9 px-3 bg-[#1F2937] border border-white/10 rounded-lg text-sm text-white"
+                className="w-20 h-9 px-2 bg-[#1F2937] border border-white/10 rounded-lg text-sm text-white"
               />
             </div>
-
             <div>
               <label className="block text-xs text-gray-500 uppercase mb-1">Max MCap (M)</label>
               <input
@@ -300,7 +334,91 @@ const TokenTable: React.FC<TokenTableProps> = memo(() => {
                 value={filters.maxMarketCap}
                 onChange={(e) => setFilters(f => ({ ...f, maxMarketCap: e.target.value }))}
                 placeholder="∞"
-                className="w-24 h-9 px-3 bg-[#1F2937] border border-white/10 rounded-lg text-sm text-white"
+                className="w-20 h-9 px-2 bg-[#1F2937] border border-white/10 rounded-lg text-sm text-white"
+              />
+            </div>
+
+            {/* Volume Range */}
+            <div>
+              <label className="block text-xs text-gray-500 uppercase mb-1">Min Vol (M)</label>
+              <input
+                type="number"
+                value={filters.minVolume}
+                onChange={(e) => setFilters(f => ({ ...f, minVolume: e.target.value }))}
+                placeholder="0"
+                className="w-20 h-9 px-2 bg-[#1F2937] border border-white/10 rounded-lg text-sm text-white"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500 uppercase mb-1">Max Vol (M)</label>
+              <input
+                type="number"
+                value={filters.maxVolume}
+                onChange={(e) => setFilters(f => ({ ...f, maxVolume: e.target.value }))}
+                placeholder="∞"
+                className="w-20 h-9 px-2 bg-[#1F2937] border border-white/10 rounded-lg text-sm text-white"
+              />
+            </div>
+
+            {/* Price Range */}
+            <div>
+              <label className="block text-xs text-gray-500 uppercase mb-1">Min Price</label>
+              <input
+                type="number"
+                step="0.0001"
+                value={filters.minPrice}
+                onChange={(e) => setFilters(f => ({ ...f, minPrice: e.target.value }))}
+                placeholder="$0"
+                className="w-24 h-9 px-2 bg-[#1F2937] border border-white/10 rounded-lg text-sm text-white"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500 uppercase mb-1">Max Price</label>
+              <input
+                type="number"
+                step="0.0001"
+                value={filters.maxPrice}
+                onChange={(e) => setFilters(f => ({ ...f, maxPrice: e.target.value }))}
+                placeholder="$∞"
+                className="w-24 h-9 px-2 bg-[#1F2937] border border-white/10 rounded-lg text-sm text-white"
+              />
+            </div>
+
+            {/* Volume Health */}
+            <div>
+              <label className="block text-xs text-gray-500 uppercase mb-1">Vol Health</label>
+              <select
+                value={filters.volumeHealth}
+                onChange={(e) => setFilters(f => ({ ...f, volumeHealth: e.target.value }))}
+                className="h-9 px-3 bg-[#1F2937] border border-white/10 rounded-lg text-sm text-white"
+              >
+                <option value="">All</option>
+                <option value="healthy">Healthy</option>
+                <option value="unhealthy">Unhealthy</option>
+              </select>
+            </div>
+
+            {/* Min Liquidity */}
+            <div>
+              <label className="block text-xs text-gray-500 uppercase mb-1">Min Liquidity</label>
+              <input
+                type="number"
+                value={filters.minLiquidity}
+                onChange={(e) => setFilters(f => ({ ...f, minLiquidity: e.target.value }))}
+                placeholder="0"
+                className="w-20 h-9 px-2 bg-[#1F2937] border border-white/10 rounded-lg text-sm text-white"
+              />
+            </div>
+
+            {/* Min Wallet Dist */}
+            <div>
+              <label className="block text-xs text-gray-500 uppercase mb-1">Min Wallet Dist</label>
+              <input
+                type="number"
+                value={filters.minWalletDist}
+                onChange={(e) => setFilters(f => ({ ...f, minWalletDist: e.target.value }))}
+                placeholder="0"
+                className="w-20 h-9 px-2 bg-[#1F2937] border border-white/10 rounded-lg text-sm text-white"
               />
             </div>
 
