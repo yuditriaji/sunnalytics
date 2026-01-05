@@ -1,57 +1,71 @@
 // components/BottomNav.tsx
 import React from 'react';
 import { useRouter } from 'next/router';
-import { FaChartLine, FaFilter, FaSearch, FaHome, FaStar, FaWallet } from 'react-icons/fa';
+import { FaChartLine, FaSearch, FaHome, FaStar, FaBell } from 'react-icons/fa';
 
 interface BottomNavProps {
   onFilterClick?: () => void;
   onSearchFocus?: () => void;
 }
 
-const BottomNav: React.FC<BottomNavProps> = ({ onFilterClick, onSearchFocus }) => {
+const navItems = [
+  { id: 'home', label: 'Market', icon: FaHome, href: '/' },
+  { id: 'watchlist', label: 'Watchlist', icon: FaStar, href: '/watchlist' },
+  { id: 'search', label: 'Search', icon: FaSearch, href: null },
+  { id: 'charts', label: 'Charts', icon: FaChartLine, href: '/charts' },
+  { id: 'alerts', label: 'Alerts', icon: FaBell, href: '/alerts' },
+];
+
+const BottomNav: React.FC<BottomNavProps> = ({ onSearchFocus }) => {
   const router = useRouter();
 
+  const isActive = (href: string | null) => {
+    if (!href) return false;
+    if (href === '/') return router.pathname === '/';
+    return router.pathname.startsWith(href);
+  };
+
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-gray-800 h-20 p-2 flex justify-around items-center border-t border-gray-700 shadow-lg pb-safe-area-inset-bottom">
-      <button
-        onClick={() => router.push('/')}
-        className={`flex flex-col items-center text-xs ${router.pathname === '/' ? 'text-yellow-400' : 'text-gray-400'
-          } hover:text-yellow-400 transition-all duration-200 hover:scale-110`}
-      >
-        <FaHome className="text-lg mb-1" />
-        <span>Market</span>
-      </button>
-      <button
-        onClick={() => router.push('/watchlist')}
-        className={`flex flex-col items-center text-xs ${router.pathname === '/watchlist' ? 'text-yellow-400' : 'text-gray-400'
-          } hover:text-yellow-400 transition-all duration-200 hover:scale-110`}
-      >
-        <FaStar className="text-lg mb-1" />
-        <span>Watchlist</span>
-      </button>
-      <button
-        onClick={onSearchFocus}
-        className="flex flex-col items-center text-xs text-gray-400 hover:text-yellow-400 transition-all duration-200 hover:scale-110"
-      >
-        <FaSearch className="text-lg mb-1" />
-        <span>Search</span>
-      </button>
-      <button
-        onClick={() => router.push('/portfolio')}
-        className={`flex flex-col items-center text-xs ${router.pathname === '/portfolio' ? 'text-yellow-400' : 'text-gray-400'
-          } hover:text-yellow-400 transition-all duration-200 hover:scale-110`}
-      >
-        <FaWallet className="text-lg mb-1" />
-        <span>Portfolio</span>
-      </button>
-      <button
-        onClick={() => router.push('/charts')}
-        className={`flex flex-col items-center text-xs ${router.pathname === '/charts' ? 'text-yellow-400' : 'text-gray-400'
-          } hover:text-yellow-400 transition-all duration-200 hover:scale-110`}
-      >
-        <FaChartLine className="text-lg mb-1" />
-        <span>Charts</span>
-      </button>
+    <nav className="fixed bottom-0 left-0 right-0 z-50">
+      {/* Blur background */}
+      <div className="absolute inset-0 bg-[#0D1321]/90 backdrop-blur-xl border-t border-white/5" />
+
+      {/* Content */}
+      <div className="relative flex justify-around items-center h-16 pb-safe-area-inset-bottom">
+        {navItems.map((item) => {
+          const Icon = item.icon;
+          const active = isActive(item.href);
+
+          return (
+            <button
+              key={item.id}
+              onClick={() => {
+                if (item.id === 'search' && onSearchFocus) {
+                  onSearchFocus();
+                } else if (item.href) {
+                  router.push(item.href);
+                }
+              }}
+              className={`
+                flex flex-col items-center justify-center gap-1 px-4 py-2
+                transition-all duration-200
+                ${active ? 'text-cyan-400' : 'text-gray-500'}
+              `}
+            >
+              <div className={`
+                relative p-2 rounded-xl transition-all
+                ${active ? 'bg-cyan-500/10' : 'hover:bg-white/5'}
+              `}>
+                <Icon className="w-5 h-5" />
+                {active && (
+                  <div className="absolute inset-0 rounded-xl bg-cyan-500/20 blur-lg" />
+                )}
+              </div>
+              <span className="text-[10px] font-medium">{item.label}</span>
+            </button>
+          );
+        })}
+      </div>
     </nav>
   );
 };

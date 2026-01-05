@@ -4,69 +4,95 @@ import React from 'react';
 interface StatsCardProps {
     title: string;
     value: string;
+    subtitle?: string;
     change?: number;
     icon: React.ReactNode;
-    color?: 'blue' | 'green' | 'yellow' | 'red' | 'purple';
+    color?: 'cyan' | 'green' | 'orange' | 'red' | 'purple';
 }
 
 const colorClasses = {
-    blue: {
-        bg: 'from-blue-500/20 to-blue-600/5',
-        border: 'border-blue-500/20',
-        text: 'text-blue-400',
-        icon: 'bg-blue-500/20 text-blue-400',
+    cyan: {
+        gradient: 'from-cyan-500/10 via-cyan-500/5 to-transparent',
+        border: 'border-cyan-500/20',
+        text: 'text-cyan-400',
+        icon: 'bg-cyan-500/15 text-cyan-400',
+        glow: 'bg-cyan-500/30',
     },
     green: {
-        bg: 'from-green-500/20 to-green-600/5',
-        border: 'border-green-500/20',
-        text: 'text-green-400',
-        icon: 'bg-green-500/20 text-green-400',
+        gradient: 'from-emerald-500/10 via-emerald-500/5 to-transparent',
+        border: 'border-emerald-500/20',
+        text: 'text-emerald-400',
+        icon: 'bg-emerald-500/15 text-emerald-400',
+        glow: 'bg-emerald-500/30',
     },
-    yellow: {
-        bg: 'from-yellow-500/20 to-yellow-600/5',
-        border: 'border-yellow-500/20',
-        text: 'text-yellow-400',
-        icon: 'bg-yellow-500/20 text-yellow-400',
+    orange: {
+        gradient: 'from-orange-500/10 via-orange-500/5 to-transparent',
+        border: 'border-orange-500/20',
+        text: 'text-orange-400',
+        icon: 'bg-orange-500/15 text-orange-400',
+        glow: 'bg-orange-500/30',
     },
     red: {
-        bg: 'from-red-500/20 to-red-600/5',
+        gradient: 'from-red-500/10 via-red-500/5 to-transparent',
         border: 'border-red-500/20',
         text: 'text-red-400',
-        icon: 'bg-red-500/20 text-red-400',
+        icon: 'bg-red-500/15 text-red-400',
+        glow: 'bg-red-500/30',
     },
     purple: {
-        bg: 'from-purple-500/20 to-purple-600/5',
+        gradient: 'from-purple-500/10 via-purple-500/5 to-transparent',
         border: 'border-purple-500/20',
         text: 'text-purple-400',
-        icon: 'bg-purple-500/20 text-purple-400',
+        icon: 'bg-purple-500/15 text-purple-400',
+        glow: 'bg-purple-500/30',
     },
 };
 
-const StatsCard: React.FC<StatsCardProps> = ({ title, value, change, icon, color = 'blue' }) => {
+const StatsCard: React.FC<StatsCardProps> = ({
+    title,
+    value,
+    subtitle,
+    change,
+    icon,
+    color = 'cyan'
+}) => {
     const colors = colorClasses[color];
 
     return (
         <div
             className={`
-        relative overflow-hidden rounded-2xl border backdrop-blur-xl
-        bg-gradient-to-br ${colors.bg} ${colors.border}
-        p-4 transition-all hover:scale-[1.02] hover:shadow-lg
+        relative overflow-hidden rounded-2xl
+        bg-[#141B2D] border ${colors.border}
+        p-4 transition-all duration-200
+        hover:border-opacity-50 hover:shadow-lg hover:shadow-black/20
+        group
       `}
         >
-            {/* Glow effect */}
-            <div className={`absolute -top-12 -right-12 w-24 h-24 rounded-full blur-3xl ${colors.text} opacity-20`} />
+            {/* Background gradient */}
+            <div className={`absolute inset-0 bg-gradient-to-br ${colors.gradient} opacity-50`} />
+
+            {/* Glow effect on hover */}
+            <div className={`absolute -top-12 -right-12 w-24 h-24 rounded-full blur-3xl ${colors.glow} opacity-0 group-hover:opacity-30 transition-opacity`} />
 
             <div className="relative flex items-start justify-between">
-                <div>
-                    <p className="text-xs text-gray-400 mb-1">{title}</p>
-                    <p className={`text-xl font-bold ${colors.text}`}>{value}</p>
+                <div className="flex-1">
+                    <p className="text-xs text-gray-500 font-medium uppercase tracking-wide mb-1">
+                        {title}
+                    </p>
+                    <p className={`text-2xl font-bold text-white`}>
+                        {value}
+                    </p>
+                    {subtitle && (
+                        <p className="text-xs text-gray-500 mt-1">{subtitle}</p>
+                    )}
                     {change !== undefined && (
-                        <p className={`text-xs mt-1 ${change >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                            {change >= 0 ? '↑' : '↓'} {Math.abs(change).toFixed(2)}%
-                        </p>
+                        <div className={`flex items-center gap-1 mt-2 text-sm ${change >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                            <span>{change >= 0 ? '↑' : '↓'}</span>
+                            <span className="font-medium">{Math.abs(change).toFixed(2)}%</span>
+                        </div>
                     )}
                 </div>
-                <div className={`p-2 rounded-xl ${colors.icon}`}>
+                <div className={`p-2.5 rounded-xl ${colors.icon}`}>
                     {icon}
                 </div>
             </div>

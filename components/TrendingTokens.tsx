@@ -1,7 +1,7 @@
 // components/TrendingTokens.tsx
 import React from 'react';
 import { useRouter } from 'next/router';
-import { FaFire, FaArrowUp, FaArrowDown } from 'react-icons/fa';
+import { FaArrowUp, FaArrowDown, FaChartLine } from 'react-icons/fa';
 
 interface Token {
     id: string;
@@ -25,22 +25,41 @@ const TrendingTokens: React.FC<TrendingTokensProps> = ({
 }) => {
     const router = useRouter();
 
-    const getIcon = () => {
+    const getHeaderStyle = () => {
         switch (type) {
             case 'gainers':
-                return <FaArrowUp className="text-green-400" />;
+                return {
+                    icon: <FaArrowUp className="w-4 h-4" />,
+                    color: 'text-emerald-400',
+                    bg: 'bg-emerald-500/10',
+                    border: 'border-emerald-500/20',
+                };
             case 'losers':
-                return <FaArrowDown className="text-red-400" />;
+                return {
+                    icon: <FaArrowDown className="w-4 h-4" />,
+                    color: 'text-red-400',
+                    bg: 'bg-red-500/10',
+                    border: 'border-red-500/20',
+                };
             default:
-                return <FaFire className="text-orange-400" />;
+                return {
+                    icon: <FaChartLine className="w-4 h-4" />,
+                    color: 'text-cyan-400',
+                    bg: 'bg-cyan-500/10',
+                    border: 'border-cyan-500/20',
+                };
         }
     };
 
+    const style = getHeaderStyle();
+
     const formatPrice = (price?: number) => {
         if (!price) return '$0.00';
+        if (price < 0.0001) return `$${price.toExponential(2)}`;
         if (price < 0.01) return `$${price.toFixed(6)}`;
         if (price < 1) return `$${price.toFixed(4)}`;
-        return `$${price.toFixed(2)}`;
+        if (price < 1000) return `$${price.toFixed(2)}`;
+        return `$${price.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
     };
 
     const formatMarketCap = (cap?: number) => {
@@ -51,34 +70,46 @@ const TrendingTokens: React.FC<TrendingTokensProps> = ({
     };
 
     return (
-        <div className="bg-gray-800/50 backdrop-blur-xl border border-gray-700/50 rounded-2xl p-4">
-            <div className="flex items-center gap-2 mb-4">
-                {getIcon()}
+        <div className={`bg-[#141B2D] border ${style.border} rounded-2xl overflow-hidden`}>
+            {/* Header */}
+            <div className={`px-4 py-3 border-b ${style.border} flex items-center gap-2`}>
+                <div className={`p-1.5 rounded-lg ${style.bg} ${style.color}`}>
+                    {style.icon}
+                </div>
                 <h3 className="text-sm font-semibold text-white">{title}</h3>
             </div>
 
-            <div className="space-y-3">
+            {/* Token List */}
+            <div className="divide-y divide-white/5">
                 {tokens.slice(0, 5).map((token, index) => (
                     <div
                         key={token.id}
                         onClick={() => router.push(`/tokens/${token.id}`)}
-                        className="flex items-center justify-between p-2 rounded-xl hover:bg-gray-700/50 cursor-pointer transition-all"
+                        className="flex items-center justify-between px-4 py-3 hover:bg-white/5 cursor-pointer transition-all"
                     >
                         <div className="flex items-center gap-3">
-                            <span className="text-xs text-gray-500 w-4">{index + 1}</span>
-                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center text-xs font-bold text-black">
-                                {token.symbol.slice(0, 2)}
+                            <span className="text-xs text-gray-600 w-4 font-medium">{index + 1}</span>
+                            <div className={`
+                w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold
+                ${type === 'gainers'
+                                    ? 'bg-gradient-to-br from-emerald-400 to-cyan-500'
+                                    : type === 'losers'
+                                        ? 'bg-gradient-to-br from-red-400 to-pink-500'
+                                        : 'bg-gradient-to-br from-cyan-400 to-blue-500'
+                                } text-black
+              `}>
+                                {token.symbol.slice(0, 2).toUpperCase()}
                             </div>
                             <div>
-                                <p className="text-sm font-medium text-white">{token.symbol}</p>
-                                <p className="text-xs text-gray-400">{formatMarketCap(token.marketCap)}</p>
+                                <p className="text-sm font-medium text-white uppercase">{token.symbol}</p>
+                                <p className="text-xs text-gray-500">{formatMarketCap(token.marketCap)}</p>
                             </div>
                         </div>
                         <div className="text-right">
                             <p className="text-sm font-medium text-white">{formatPrice(token.price)}</p>
                             {token.priceChange24h !== undefined && (
                                 <p
-                                    className={`text-xs ${token.priceChange24h >= 0 ? 'text-green-400' : 'text-red-400'
+                                    className={`text-xs font-medium ${token.priceChange24h >= 0 ? 'text-emerald-400' : 'text-red-400'
                                         }`}
                                 >
                                     {token.priceChange24h >= 0 ? '+' : ''}
@@ -91,7 +122,9 @@ const TrendingTokens: React.FC<TrendingTokensProps> = ({
             </div>
 
             {tokens.length === 0 && (
-                <p className="text-center text-gray-500 text-sm py-4">No tokens available</p>
+                <div className="px-4 py-8 text-center">
+                    <p className="text-gray-500 text-sm">No tokens available</p>
+                </div>
             )}
         </div>
     );
