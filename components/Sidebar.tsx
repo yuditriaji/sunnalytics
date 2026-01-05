@@ -2,17 +2,15 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import {
-    FaHome,
-    FaChartLine,
-    FaBriefcase,
-    FaNewspaper,
-    FaCog,
-    FaSearch,
-    FaBell,
-    FaStar,
-    FaChevronLeft,
-    FaChevronRight,
-} from 'react-icons/fa';
+    FiHome,
+    FiTrendingUp,
+    FiStar,
+    FiBriefcase,
+    FiBell,
+    FiSettings,
+    FiSearch,
+    FiChevronLeft,
+} from 'react-icons/fi';
 
 interface SidebarProps {
     collapsed?: boolean;
@@ -20,12 +18,12 @@ interface SidebarProps {
 }
 
 const menuItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: FaHome, href: '/' },
-    { id: 'market', label: 'Market', icon: FaChartLine, href: '/charts' },
-    { id: 'watchlist', label: 'Watchlist', icon: FaStar, href: '/watchlist' },
-    { id: 'portfolio', label: 'Portfolio', icon: FaBriefcase, href: '/portfolio' },
-    { id: 'alerts', label: 'Alerts', icon: FaBell, href: '/alerts' },
-    { id: 'settings', label: 'Settings', icon: FaCog, href: '/settings' },
+    { id: 'dashboard', label: 'Dashboard', icon: FiHome, href: '/' },
+    { id: 'market', label: 'Market', icon: FiTrendingUp, href: '/charts' },
+    { id: 'watchlist', label: 'Watchlist', icon: FiStar, href: '/watchlist' },
+    { id: 'portfolio', label: 'Portfolio', icon: FiBriefcase, href: '/portfolio' },
+    { id: 'alerts', label: 'Alerts', icon: FiBell, href: '/alerts' },
+    { id: 'settings', label: 'Settings', icon: FiSettings, href: '/settings' },
 ];
 
 export default function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
@@ -40,92 +38,85 @@ export default function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
     return (
         <aside
             className={`
-        fixed left-0 top-0 h-screen z-40
-        bg-[#0D1321] border-r border-white/5
-        transition-all duration-300 ease-in-out
-        ${collapsed ? 'w-[72px]' : 'w-[240px]'}
+        fixed left-0 top-0 h-screen z-50
+        bg-[#0D1117] border-r border-white/5
+        transition-all duration-300
+        ${collapsed ? 'w-16' : 'w-[200px]'}
         hidden lg:flex flex-col
       `}
         >
             {/* Logo */}
             <div className="h-16 flex items-center px-4 border-b border-white/5">
                 <Link href="/" className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-400 to-cyan-600 flex items-center justify-center">
-                        <span className="text-white font-bold text-lg">S</span>
+                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-teal-400 to-cyan-500 flex items-center justify-center flex-shrink-0">
+                        <span className="text-white font-bold text-sm">S</span>
                     </div>
                     {!collapsed && (
-                        <span className="text-white font-semibold text-lg">Sunnalytics</span>
+                        <span className="text-white font-semibold text-base">Sunnalytics</span>
                     )}
                 </Link>
             </div>
 
             {/* Search */}
             {!collapsed && (
-                <div className="p-4">
+                <div className="px-3 py-4">
                     <div className="relative">
-                        <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 w-4 h-4" />
+                        <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 w-4 h-4" />
                         <input
                             type="text"
                             placeholder="Search..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2.5 bg-white/5 border border-white/10 rounded-xl
-                text-white placeholder-gray-500 text-sm
-                focus:outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/30
-                transition-all"
+                            className="w-full h-9 pl-9 pr-3 bg-[#1F2937] border border-white/5 rounded-lg
+                text-white text-sm placeholder-gray-500
+                focus:border-cyan-500/30 transition-colors"
                         />
                     </div>
                 </div>
             )}
 
             {/* Navigation */}
-            <nav className="flex-1 px-3 py-2 overflow-y-auto">
-                <ul className="space-y-1">
-                    {menuItems.map((item) => {
-                        const Icon = item.icon;
-                        const active = isActive(item.href);
+            <nav className="flex-1 px-2 py-2">
+                {menuItems.map((item) => {
+                    const Icon = item.icon;
+                    const active = isActive(item.href);
 
-                        return (
-                            <li key={item.id}>
-                                <Link
-                                    href={item.href}
-                                    className={`
-                    flex items-center gap-3 px-3 py-2.5 rounded-xl
-                    transition-all duration-200
-                    ${active
-                                            ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20'
-                                            : 'text-gray-400 hover:text-white hover:bg-white/5 border border-transparent'
-                                        }
-                    ${collapsed ? 'justify-center' : ''}
-                  `}
-                                >
-                                    <Icon className={`w-5 h-5 ${active ? 'text-cyan-400' : ''}`} />
-                                    {!collapsed && (
-                                        <span className="text-sm font-medium">{item.label}</span>
-                                    )}
-                                </Link>
-                            </li>
-                        );
-                    })}
-                </ul>
+                    return (
+                        <Link
+                            key={item.id}
+                            href={item.href}
+                            className={`
+                flex items-center gap-3 h-10 px-3 mb-1 rounded-lg
+                transition-all duration-150
+                ${active
+                                    ? 'bg-cyan-500/10 text-cyan-400 border-l-2 border-cyan-400'
+                                    : 'text-gray-400 hover:text-white hover:bg-white/5'
+                                }
+                ${collapsed ? 'justify-center px-0' : ''}
+              `}
+                        >
+                            <Icon className="w-[18px] h-[18px] flex-shrink-0" />
+                            {!collapsed && (
+                                <span className="text-sm font-medium">{item.label}</span>
+                            )}
+                        </Link>
+                    );
+                })}
             </nav>
 
-            {/* Collapse Toggle */}
+            {/* Collapse Button */}
             <div className="p-3 border-t border-white/5">
                 <button
                     onClick={onToggle}
-                    className="w-full flex items-center justify-center gap-2 px-3 py-2.5 
-            text-gray-400 hover:text-white hover:bg-white/5 
-            rounded-xl transition-all"
+                    className={`
+            flex items-center gap-2 w-full h-9 px-3 rounded-lg
+            text-gray-400 hover:text-white hover:bg-white/5
+            transition-all
+            ${collapsed ? 'justify-center px-0' : ''}
+          `}
                 >
-                    {collapsed ? (
-                        <FaChevronRight className="w-4 h-4" />
-                    ) : (
-                        <>
-                            <FaChevronLeft className="w-4 h-4" />
-                            <span className="text-sm">Collapse</span>
-                        </>
-                    )}
+                    <FiChevronLeft className={`w-4 h-4 transition-transform ${collapsed ? 'rotate-180' : ''}`} />
+                    {!collapsed && <span className="text-sm">Collapse</span>}
                 </button>
             </div>
         </aside>
