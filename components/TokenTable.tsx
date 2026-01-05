@@ -12,6 +12,8 @@ interface Token {
   volume24h?: number;
   chain?: string;
   exchange?: string;
+  volumeMarketCapRatio?: number;
+  isVolumeHealthy?: boolean;
   liquidityScore?: number;
   pumpDumpRiskScore?: number;
   walletDistributionScore?: number;
@@ -45,8 +47,12 @@ const ALL_COLUMNS = [
   { id: 'chain', label: 'Chain', sortable: false },
   { id: 'marketCap', label: 'Market Cap', sortable: true },
   { id: 'volume24h', label: 'Volume 24h', sortable: true },
-  { id: 'liquidity', label: 'Liquidity', sortable: false },
-  { id: 'risk', label: 'Risk', sortable: false },
+  { id: 'volMcapRatio', label: 'Vol/MCap Ratio', sortable: false },
+  { id: 'volHealthy', label: 'Vol. Health', sortable: false },
+  { id: 'liquidity', label: 'Liquidity Score', sortable: false },
+  { id: 'pumpDumpRisk', label: 'P&D Risk', sortable: false },
+  { id: 'walletDist', label: 'Wallet Dist.', sortable: false },
+  { id: 'risk', label: 'Risk Level', sortable: false },
 ];
 
 const DEFAULT_COLUMNS = ['name', 'price', 'change24h', 'exchange', 'marketCap', 'volume24h', 'risk'];
@@ -322,7 +328,11 @@ const TokenTable: React.FC<TokenTableProps> = memo(() => {
               {visibleColumns.includes('chain') && <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Chain</th>}
               {visibleColumns.includes('marketCap') && <SortHeader label="Market Cap" sortKey="marketCap" />}
               {visibleColumns.includes('volume24h') && <SortHeader label="Volume 24h" sortKey="volume24h" />}
+              {visibleColumns.includes('volMcapRatio') && <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Vol/MCap</th>}
+              {visibleColumns.includes('volHealthy') && <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Vol Health</th>}
               {visibleColumns.includes('liquidity') && <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Liquidity</th>}
+              {visibleColumns.includes('pumpDumpRisk') && <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">P&D Risk</th>}
+              {visibleColumns.includes('walletDist') && <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Wallet Dist</th>}
               {visibleColumns.includes('risk') && <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Risk</th>}
             </tr>
           </thead>
@@ -369,13 +379,49 @@ const TokenTable: React.FC<TokenTableProps> = memo(() => {
                   )}
                   {visibleColumns.includes('marketCap') && <td className="px-4 py-3 text-sm text-white">{formatLargeNumber(token.marketCap)}</td>}
                   {visibleColumns.includes('volume24h') && <td className="px-4 py-3 text-sm text-gray-400">{formatLargeNumber(token.volume24h)}</td>}
+                  {visibleColumns.includes('volMcapRatio') && (
+                    <td className="px-4 py-3">
+                      {token.volumeMarketCapRatio !== undefined ? (
+                        <span className={`text-xs font-medium ${token.volumeMarketCapRatio > 2 ? 'text-red-400' : token.volumeMarketCapRatio > 1 ? 'text-amber-400' : 'text-gray-400'}`}>
+                          {(token.volumeMarketCapRatio * 100).toFixed(2)}%
+                        </span>
+                      ) : <span className="text-xs text-gray-600">-</span>}
+                    </td>
+                  )}
+                  {visibleColumns.includes('volHealthy') && (
+                    <td className="px-4 py-3">
+                      {token.isVolumeHealthy !== undefined ? (
+                        <span className={`text-xs font-medium px-2 py-1 rounded ${token.isVolumeHealthy ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>
+                          {token.isVolumeHealthy ? 'Yes' : 'No'}
+                        </span>
+                      ) : <span className="text-xs text-gray-600">-</span>}
+                    </td>
+                  )}
                   {visibleColumns.includes('liquidity') && (
                     <td className="px-4 py-3">
-                      {token.liquidityScore !== undefined && token.liquidityScore > 0 && (
+                      {token.liquidityScore !== undefined && token.liquidityScore > 0 ? (
                         <span className={`text-xs font-medium px-2 py-1 rounded ${token.liquidityScore >= 70 ? 'bg-emerald-500/10 text-emerald-400' : token.liquidityScore >= 40 ? 'bg-amber-500/10 text-amber-400' : 'bg-red-500/10 text-red-400'}`}>
                           {token.liquidityScore.toFixed(0)}
                         </span>
-                      )}
+                      ) : <span className="text-xs text-gray-600">-</span>}
+                    </td>
+                  )}
+                  {visibleColumns.includes('pumpDumpRisk') && (
+                    <td className="px-4 py-3">
+                      {token.pumpDumpRiskScore !== undefined && token.pumpDumpRiskScore > 0 ? (
+                        <span className={`text-xs font-medium px-2 py-1 rounded ${token.pumpDumpRiskScore <= 30 ? 'bg-emerald-500/10 text-emerald-400' : token.pumpDumpRiskScore <= 60 ? 'bg-amber-500/10 text-amber-400' : 'bg-red-500/10 text-red-400'}`}>
+                          {token.pumpDumpRiskScore.toFixed(0)}
+                        </span>
+                      ) : <span className="text-xs text-gray-600">-</span>}
+                    </td>
+                  )}
+                  {visibleColumns.includes('walletDist') && (
+                    <td className="px-4 py-3">
+                      {token.walletDistributionScore !== undefined && token.walletDistributionScore > 0 ? (
+                        <span className={`text-xs font-medium px-2 py-1 rounded ${token.walletDistributionScore >= 70 ? 'bg-emerald-500/10 text-emerald-400' : token.walletDistributionScore >= 40 ? 'bg-amber-500/10 text-amber-400' : 'bg-red-500/10 text-red-400'}`}>
+                          {token.walletDistributionScore.toFixed(0)}
+                        </span>
+                      ) : <span className="text-xs text-gray-600">-</span>}
                     </td>
                   )}
                   {visibleColumns.includes('risk') && (
