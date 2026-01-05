@@ -1,7 +1,6 @@
 import React from 'react';
 import { useRouter } from 'next/router';
-import { FaChartLine, FaExclamationTriangle, FaStar, FaArrowUp, FaArrowDown } from 'react-icons/fa';
-import RiskIndicator from './RiskIndicator';
+import { FiStar, FiTrendingUp, FiArrowUpRight } from 'react-icons/fi';
 import { useTokenStore } from '../stores/useTokenStore';
 
 interface TokenAnalyticsCardProps {
@@ -9,13 +8,11 @@ interface TokenAnalyticsCardProps {
     id: string;
     name: string;
     symbol: string;
-    category: string;
+    category?: string;
     exchange?: string;
     price?: number;
     marketCap?: number;
     volume24h?: number;
-    volumeMarketCapRatio?: number;
-    isVolumeHealthy?: boolean;
     liquidityScore?: number;
     pumpDumpRiskScore?: number;
     walletDistributionScore?: number;
@@ -25,211 +22,117 @@ interface TokenAnalyticsCardProps {
   };
 }
 
+const tokenColors = [
+  'bg-gradient-to-br from-purple-500 to-indigo-600',
+  'bg-gradient-to-br from-pink-500 to-rose-500',
+  'bg-gradient-to-br from-teal-400 to-cyan-500',
+  'bg-gradient-to-br from-orange-400 to-amber-500',
+  'bg-gradient-to-br from-emerald-400 to-green-500',
+];
+
 const TokenAnalyticsCard: React.FC<TokenAnalyticsCardProps> = ({ token }) => {
   const router = useRouter();
   const { watchlist, addToWatchlist } = useTokenStore();
-  
   const isInWatchlist = watchlist.some(w => w.id === token.id);
-  
-  // Create a token object with required exchange field
-  const tokenForWatchlist = {
-    ...token,
-    exchange: token.exchange || 'Unknown'
-  };
+  const colorIndex = token.symbol.charCodeAt(0) % tokenColors.length;
 
-  const formatNumber = (value: number | undefined): string => {
-    if (value === undefined || value === 0) return '-';
+  const formatNumber = (value?: number): string => {
+    if (!value) return '-';
     if (value >= 1e9) return `$${(value / 1e9).toFixed(2)}B`;
     if (value >= 1e6) return `$${(value / 1e6).toFixed(2)}M`;
-    if (value >= 1e3) return `$${(value / 1e3).toFixed(2)}K`;
+    if (value >= 1e3) return `$${(value / 1e3).toFixed(0)}K`;
     return `$${value.toFixed(2)}`;
   };
 
-  const formatPercentage = (value: number | undefined): string => {
-    if (value === undefined) return '-';
-    return `${value.toFixed(2)}%`;
+  const formatPrice = (price?: number) => {
+    if (!price) return '-';
+    if (price < 0.01) return `$${price.toFixed(6)}`;
+    if (price < 1) return `$${price.toFixed(4)}`;
+    return `$${price.toFixed(2)}`;
   };
 
-  const getPriceChangeColor = (change: number | undefined) => {
-    if (change === undefined) return 'text-gray-400';
-    return change >= 0 ? 'text-green-400' : 'text-red-400';
-  };
-
-  const getPriceChangeIcon = (change: number | undefined) => {
-    if (change === undefined || change === 0) return null;
-    return change > 0 ? <FaArrowUp className="inline w-3 h-3 ml-1" /> : <FaArrowDown className="inline w-3 h-3 ml-1" />;
-  };
-
-  const getHealthIndicator = () => {
-    const scores = [];
-    if (token.liquidityScore !== undefined) scores.push(token.liquidityScore);
-    if (token.walletDistributionScore !== undefined) scores.push(token.walletDistributionScore);
-    if (token.pumpDumpRiskScore !== undefined) scores.push(100 - token.pumpDumpRiskScore);
-    
-    if (scores.length === 0) return null;
-    
-    const avgScore = scores.reduce((a, b) => a + b, 0) / scores.length;
-    
-    if (avgScore >= 70) return { color: 'bg-green-500', label: 'Excellent' };
-    if (avgScore >= 50) return { color: 'bg-yellow-500', label: 'Good' };
-    if (avgScore >= 30) return { color: 'bg-orange-500', label: 'Fair' };
-    return { color: 'bg-red-500', label: 'Poor' };
-  };
-
-  const healthIndicator = getHealthIndicator();
+  const change24h = token.stats?.priceChange24h;
 
   return (
-    <div className="bg-gray-800 rounded-lg p-6 hover:bg-gray-750 transition-all duration-200 border border-gray-700 hover:border-gray-600">
+    <div
+      onClick={() => router.push(`/tokens/${token.id}`)}
+      className="bg-[#111827] border border-white/5 rounded-xl p-4 hover:border-white/10 cursor-pointer transition-all group"
+    >
       {/* Header */}
-      <div className="flex justify-between items-start mb-4">
-        <div>
-          <h3 className="text-xl font-bold text-white flex items-center">
-            {token.symbol}
-            {token.exchange && (
-              <span className="ml-2 text-xs bg-gray-700 px-2 py-1 rounded text-gray-400">
-                {token.exchange}
-              </span>
-            )}
-          </h3>
-          <p className="text-sm text-gray-400">{token.name}</p>
-          <p className="text-xs text-gray-500 capitalize">{token.category}</p>
+      <div className="flex items-start justify-between mb-4">
+        <div className="flex items-center gap-3">
+          <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold text-white ${tokenColors[colorIndex]}`}>
+            {token.symbol.slice(0, 2).toUpperCase()}
+          </div>
+          <div>
+            <h3 className="text-sm font-semibold text-white group-hover:text-cyan-400 transition-colors">
+              {token.symbol}
+            </h3>
+            <p className="text-xs text-gray-500 truncate max-w-[120px]">{token.name}</p>
+          </div>
         </div>
-        <div className="flex items-center space-x-2">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              addToWatchlist(tokenForWatchlist as any);
-            }}
-            className={`p-2 rounded-full transition-colors ${
-              isInWatchlist ? 'bg-yellow-500 text-gray-900' : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            addToWatchlist({ ...token, exchange: token.exchange || 'Unknown' } as any);
+          }}
+          className={`p-1.5 rounded-lg transition-colors ${isInWatchlist ? 'text-amber-400 bg-amber-400/10' : 'text-gray-500 hover:text-amber-400 hover:bg-white/5'
             }`}
-            title={isInWatchlist ? 'In watchlist' : 'Add to watchlist'}
-          >
-            <FaStar className="w-4 h-4" />
-          </button>
+        >
+          <FiStar className="w-4 h-4" fill={isInWatchlist ? 'currentColor' : 'none'} />
+        </button>
+      </div>
+
+      {/* Price */}
+      <div className="mb-4">
+        <p className="text-xl font-bold text-white">{formatPrice(token.price)}</p>
+        {change24h !== undefined && (
+          <p className={`text-sm font-medium ${change24h >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+            {change24h >= 0 ? '+' : ''}{change24h.toFixed(2)}%
+          </p>
+        )}
+      </div>
+
+      {/* Metrics */}
+      <div className="grid grid-cols-2 gap-2 mb-4">
+        <div className="bg-white/[0.03] rounded-lg px-3 py-2">
+          <p className="text-[10px] text-gray-500 uppercase">Mkt Cap</p>
+          <p className="text-xs font-medium text-white">{formatNumber(token.marketCap)}</p>
+        </div>
+        <div className="bg-white/[0.03] rounded-lg px-3 py-2">
+          <p className="text-[10px] text-gray-500 uppercase">Volume</p>
+          <p className="text-xs font-medium text-white">{formatNumber(token.volume24h)}</p>
         </div>
       </div>
 
-      {/* Price and Change */}
-      <div className="mb-4">
-        <div className="flex items-baseline justify-between">
-          <span className="text-2xl font-bold text-white">{formatNumber(token.price)}</span>
-          {token.stats?.priceChange24h !== undefined && (
-            <span className={`text-sm font-medium ${getPriceChangeColor(token.stats.priceChange24h)}`}>
-              {token.stats.priceChange24h >= 0 ? '+' : ''}{formatPercentage(token.stats.priceChange24h)}
-              {getPriceChangeIcon(token.stats.priceChange24h)}
+      {/* Scores */}
+      {(token.liquidityScore || token.pumpDumpRiskScore) && (
+        <div className="flex items-center gap-2">
+          {token.liquidityScore !== undefined && token.liquidityScore > 0 && (
+            <span className={`text-[10px] font-medium px-2 py-1 rounded ${token.liquidityScore >= 70 ? 'bg-emerald-500/10 text-emerald-400' :
+                token.liquidityScore >= 40 ? 'bg-amber-500/10 text-amber-400' :
+                  'bg-red-500/10 text-red-400'
+              }`}>
+              Liq: {token.liquidityScore.toFixed(0)}
+            </span>
+          )}
+          {token.pumpDumpRiskScore !== undefined && token.pumpDumpRiskScore > 0 && (
+            <span className={`text-[10px] font-medium px-2 py-1 rounded ${token.pumpDumpRiskScore <= 30 ? 'bg-emerald-500/10 text-emerald-400' :
+                token.pumpDumpRiskScore <= 60 ? 'bg-amber-500/10 text-amber-400' :
+                  'bg-red-500/10 text-red-400'
+              }`}>
+              Risk: {token.pumpDumpRiskScore <= 30 ? 'Low' : token.pumpDumpRiskScore <= 60 ? 'Med' : 'High'}
             </span>
           )}
         </div>
-      </div>
+      )}
 
-      {/* Key Metrics Grid */}
-      <div className="grid grid-cols-2 gap-3 mb-4">
-        <div className="bg-gray-700 rounded p-3">
-          <p className="text-xs text-gray-400 mb-1">Market Cap</p>
-          <p className="text-sm font-semibold text-white">{formatNumber(token.marketCap)}</p>
+      {/* View Details */}
+      <div className="mt-4 pt-3 border-t border-white/5">
+        <div className="flex items-center justify-between text-xs text-gray-500 group-hover:text-cyan-400 transition-colors">
+          <span>View Details</span>
+          <FiArrowUpRight className="w-3 h-3" />
         </div>
-        <div className="bg-gray-700 rounded p-3">
-          <p className="text-xs text-gray-400 mb-1">24h Volume</p>
-          <p className="text-sm font-semibold text-white">{formatNumber(token.volume24h)}</p>
-        </div>
-        <div className="bg-gray-700 rounded p-3">
-          <p className="text-xs text-gray-400 mb-1">Vol/MCap Ratio</p>
-          <p className="text-sm font-semibold text-white">
-            {token.volumeMarketCapRatio !== undefined ? formatPercentage(token.volumeMarketCapRatio * 100) : '-'}
-          </p>
-        </div>
-        <div className="bg-gray-700 rounded p-3">
-          <p className="text-xs text-gray-400 mb-1">Health Score</p>
-          {healthIndicator && (
-            <div className="flex items-center">
-              <div className={`w-2 h-2 rounded-full ${healthIndicator.color} mr-2`}></div>
-              <p className="text-sm font-semibold text-white">{healthIndicator.label}</p>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Risk Indicator */}
-      <div className="mb-4">
-        <RiskIndicator
-          pumpDumpRiskScore={token.pumpDumpRiskScore}
-          liquidityScore={token.liquidityScore}
-          walletDistributionScore={token.walletDistributionScore}
-          isVolumeHealthy={token.isVolumeHealthy}
-          volumeMarketCapRatio={token.volumeMarketCapRatio}
-        />
-      </div>
-
-      {/* Analytics Scores */}
-      <div className="space-y-2 mb-4">
-        {token.liquidityScore !== undefined && (
-          <div className="flex justify-between items-center">
-            <span className="text-xs text-gray-400">Liquidity</span>
-            <div className="flex items-center">
-              <div className="w-24 bg-gray-700 rounded-full h-2 mr-2">
-                <div
-                  className={`h-2 rounded-full ${
-                    token.liquidityScore >= 70 ? 'bg-green-500' : 
-                    token.liquidityScore >= 40 ? 'bg-yellow-500' : 'bg-red-500'
-                  }`}
-                  style={{ width: `${token.liquidityScore}%` }}
-                ></div>
-              </div>
-              <span className="text-xs text-white">{token.liquidityScore.toFixed(0)}</span>
-            </div>
-          </div>
-        )}
-        {token.walletDistributionScore !== undefined && (
-          <div className="flex justify-between items-center">
-            <span className="text-xs text-gray-400">Distribution</span>
-            <div className="flex items-center">
-              <div className="w-24 bg-gray-700 rounded-full h-2 mr-2">
-                <div
-                  className={`h-2 rounded-full ${
-                    token.walletDistributionScore >= 70 ? 'bg-green-500' : 
-                    token.walletDistributionScore >= 40 ? 'bg-yellow-500' : 'bg-red-500'
-                  }`}
-                  style={{ width: `${token.walletDistributionScore}%` }}
-                ></div>
-              </div>
-              <span className="text-xs text-white">{token.walletDistributionScore.toFixed(0)}</span>
-            </div>
-          </div>
-        )}
-        {token.pumpDumpRiskScore !== undefined && (
-          <div className="flex justify-between items-center">
-            <span className="text-xs text-gray-400">P&D Risk</span>
-            <div className="flex items-center">
-              <div className="w-24 bg-gray-700 rounded-full h-2 mr-2">
-                <div
-                  className={`h-2 rounded-full ${
-                    token.pumpDumpRiskScore <= 30 ? 'bg-green-500' : 
-                    token.pumpDumpRiskScore <= 60 ? 'bg-yellow-500' : 'bg-red-500'
-                  }`}
-                  style={{ width: `${token.pumpDumpRiskScore}%` }}
-                ></div>
-              </div>
-              <span className="text-xs text-white">{token.pumpDumpRiskScore.toFixed(0)}</span>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Action Buttons */}
-      <div className="flex space-x-2">
-        <button
-          onClick={() => router.push(`/tokens/${token.id}`)}
-          className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg transition-colors text-sm font-medium flex items-center justify-center"
-        >
-          <FaChartLine className="mr-2" />
-          View Details
-        </button>
-        <button
-          className="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg transition-colors text-sm font-medium"
-        >
-          Trade
-        </button>
       </div>
     </div>
   );
