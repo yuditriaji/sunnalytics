@@ -218,7 +218,7 @@ const TokenTable: React.FC<TokenTableProps> = memo(() => {
   );
 
   return (
-    <div>
+    <div className="min-h-[400px]">
       {/* Toolbar */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-white/5">
         <div className="flex items-center gap-2">

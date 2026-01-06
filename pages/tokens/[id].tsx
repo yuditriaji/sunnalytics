@@ -6,7 +6,7 @@ import 'chartjs-adapter-date-fns';
 import { useTokens } from '../../utils/api';
 import BottomNav from '../../components/BottomNav';
 import Sidebar from '../../components/Sidebar';
-import { FiArrowLeft, FiStar, FiExternalLink, FiTrendingUp, FiTrendingDown, FiAlertTriangle, FiShield, FiDroplet, FiUsers } from 'react-icons/fi';
+import { FiArrowLeft, FiStar, FiExternalLink, FiTrendingUp, FiTrendingDown, FiAlertTriangle, FiShield, FiDroplet, FiUsers, FiActivity, FiBarChart2, FiZap, FiClock, FiPercent, FiTarget } from 'react-icons/fi';
 
 ChartJS.register(LineElement, PointElement, LinearScale, TimeScale, Tooltip, Legend, Filler);
 
@@ -199,7 +199,7 @@ const TokenDetails: React.FC = () => {
           </div>
 
           {/* Stats Grid */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
             <div className="bg-[#111827] border border-white/5 rounded-xl p-4">
               <p className="text-xs text-gray-500 uppercase mb-1">Market Cap</p>
               <p className="text-lg font-bold text-white">{formatLarge(token.marketCap)}</p>
@@ -209,63 +209,194 @@ const TokenDetails: React.FC = () => {
               <p className="text-lg font-bold text-white">{formatLarge(token.volume24h)}</p>
             </div>
             <div className="bg-[#111827] border border-white/5 rounded-xl p-4">
-              <p className="text-xs text-gray-500 uppercase mb-1">Exchange</p>
-              <p className="text-lg font-bold text-white">{token.exchange || '-'}</p>
+              <p className="text-xs text-gray-500 uppercase mb-1">Fully Diluted Valuation</p>
+              <p className="text-lg font-bold text-white">{formatLarge(token.fdv || token.fullyDilutedValuation)}</p>
             </div>
             <div className="bg-[#111827] border border-white/5 rounded-xl p-4">
-              <p className="text-xs text-gray-500 uppercase mb-1">Chain</p>
-              <p className="text-lg font-bold text-white capitalize">{token.chain || '-'}</p>
+              <div className="flex items-center justify-between mb-1">
+                <p className="text-xs text-gray-500 uppercase">Vol/MCap Ratio</p>
+                <FiActivity className="w-4 h-4 text-gray-500" />
+              </div>
+              <p className={`text-lg font-bold ${(token.volumeMarketCapRatio ?? 0) > 0.5 ? 'text-red-400' :
+                (token.volumeMarketCapRatio ?? 0) > 0.2 ? 'text-amber-400' : 'text-emerald-400'
+                }`}>
+                {token.volumeMarketCapRatio !== undefined ? `${(token.volumeMarketCapRatio * 100).toFixed(2)}%` : '-'}
+              </p>
+              <p className="text-xs text-gray-500 mt-1">
+                {(token.volumeMarketCapRatio ?? 0) > 0.5 ? 'High activity' :
+                  (token.volumeMarketCapRatio ?? 0) > 0.2 ? 'Moderate' : 'Normal'}
+              </p>
+            </div>
+            <div className="bg-[#111827] border border-white/5 rounded-xl p-4">
+              <div className="flex items-center justify-between mb-1">
+                <p className="text-xs text-gray-500 uppercase">Volume Health</p>
+                <FiZap className="w-4 h-4 text-gray-500" />
+              </div>
+              <div className="flex items-center gap-2">
+                <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-sm font-medium ${token.isVolumeHealthy ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'
+                  }`}>
+                  {token.isVolumeHealthy ? '✓ Healthy' : '✗ Unhealthy'}
+                </span>
+              </div>
+              <p className="text-xs text-gray-500 mt-1">Based on volume patterns</p>
+            </div>
+            <div className="bg-[#111827] border border-white/5 rounded-xl p-4">
+              <p className="text-xs text-gray-500 uppercase mb-1">Exchange</p>
+              <p className="text-lg font-bold text-white">{token.exchange || '-'}</p>
+              <p className="text-xs text-gray-500 mt-1 capitalize">{token.chain || 'Unknown chain'}</p>
             </div>
           </div>
 
           {/* Risk Analysis */}
           <div className="bg-[#111827] border border-white/5 rounded-xl p-4 mb-6">
             <h2 className="text-sm font-medium text-white mb-4">Risk Analysis</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {/* Liquidity Score */}
-              <div className="flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${(token.liquidityScore ?? 0) >= 70 ? 'bg-emerald-500/10 text-emerald-400' :
+              <div>
+                <div className="flex items-center gap-3 mb-2">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${(token.liquidityScore ?? 0) >= 70 ? 'bg-emerald-500/10 text-emerald-400' :
                     (token.liquidityScore ?? 0) >= 40 ? 'bg-amber-500/10 text-amber-400' :
                       'bg-red-500/10 text-red-400'
-                  }`}>
-                  <FiDroplet className="w-5 h-5" />
+                    }`}>
+                    <FiDroplet className="w-5 h-5" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-xs text-gray-500">Liquidity Score</p>
+                    <p className="text-lg font-bold text-white">{token.liquidityScore?.toFixed(0) ?? '-'}/100</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-xs text-gray-500">Liquidity Score</p>
-                  <p className="text-lg font-bold text-white">{token.liquidityScore?.toFixed(0) ?? '-'}</p>
+                <div className="w-full h-2 bg-white/5 rounded-full overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all ${(token.liquidityScore ?? 0) >= 70 ? 'bg-emerald-400' :
+                      (token.liquidityScore ?? 0) >= 40 ? 'bg-amber-400' : 'bg-red-400'}`}
+                    style={{ width: `${Math.min(token.liquidityScore ?? 0, 100)}%` }}
+                  />
                 </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  {(token.liquidityScore ?? 0) >= 70 ? 'Excellent liquidity' :
+                    (token.liquidityScore ?? 0) >= 40 ? 'Moderate liquidity' : 'Low liquidity'}
+                </p>
               </div>
 
               {/* Wallet Distribution */}
-              <div className="flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${(token.walletDistributionScore ?? 0) >= 70 ? 'bg-emerald-500/10 text-emerald-400' :
+              <div>
+                <div className="flex items-center gap-3 mb-2">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${(token.walletDistributionScore ?? 0) >= 70 ? 'bg-emerald-500/10 text-emerald-400' :
                     (token.walletDistributionScore ?? 0) >= 40 ? 'bg-amber-500/10 text-amber-400' :
                       'bg-red-500/10 text-red-400'
-                  }`}>
-                  <FiUsers className="w-5 h-5" />
+                    }`}>
+                    <FiUsers className="w-5 h-5" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-xs text-gray-500">Wallet Distribution</p>
+                    <p className="text-lg font-bold text-white">{token.walletDistributionScore?.toFixed(0) ?? '-'}/100</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-xs text-gray-500">Distribution</p>
-                  <p className="text-lg font-bold text-white">{token.walletDistributionScore?.toFixed(0) ?? '-'}</p>
+                <div className="w-full h-2 bg-white/5 rounded-full overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all ${(token.walletDistributionScore ?? 0) >= 70 ? 'bg-emerald-400' :
+                      (token.walletDistributionScore ?? 0) >= 40 ? 'bg-amber-400' : 'bg-red-400'}`}
+                    style={{ width: `${Math.min(token.walletDistributionScore ?? 0, 100)}%` }}
+                  />
                 </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  {(token.walletDistributionScore ?? 0) >= 70 ? 'Well distributed' :
+                    (token.walletDistributionScore ?? 0) >= 40 ? 'Moderate concentration' : 'Highly concentrated'}
+                </p>
               </div>
 
-              {/* Risk Score */}
-              <div className="flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${(token.pumpDumpRiskScore ?? 100) <= 30 ? 'bg-emerald-500/10 text-emerald-400' :
+              {/* Pump & Dump Risk */}
+              <div>
+                <div className="flex items-center gap-3 mb-2">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${(token.pumpDumpRiskScore ?? 100) <= 30 ? 'bg-emerald-500/10 text-emerald-400' :
                     (token.pumpDumpRiskScore ?? 100) <= 60 ? 'bg-amber-500/10 text-amber-400' :
                       'bg-red-500/10 text-red-400'
+                    }`}>
+                    <FiShield className="w-5 h-5" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-xs text-gray-500">P&D Risk Score</p>
+                    <p className="text-lg font-bold text-white">
+                      {token.pumpDumpRiskScore !== undefined
+                        ? token.pumpDumpRiskScore <= 30 ? 'Low' : token.pumpDumpRiskScore <= 60 ? 'Medium' : 'High'
+                        : '-'}
+                    </p>
+                  </div>
+                </div>
+                <div className="w-full h-2 bg-white/5 rounded-full overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all ${(token.pumpDumpRiskScore ?? 100) <= 30 ? 'bg-emerald-400' :
+                      (token.pumpDumpRiskScore ?? 100) <= 60 ? 'bg-amber-400' : 'bg-red-400'}`}
+                    style={{ width: `${Math.min(token.pumpDumpRiskScore ?? 0, 100)}%` }}
+                  />
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  {(token.pumpDumpRiskScore ?? 100) <= 30 ? 'Safe investment' :
+                    (token.pumpDumpRiskScore ?? 100) <= 60 ? 'Exercise caution' : 'High risk - be careful'}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Advanced Analytics */}
+          <div className="bg-[#111827] border border-white/5 rounded-xl p-4 mb-6">
+            <h2 className="text-sm font-medium text-white mb-4">Advanced Analytics</h2>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {/* Volatility */}
+              <div className="bg-white/5 rounded-lg p-3">
+                <div className="flex items-center gap-2 mb-2">
+                  <FiActivity className="w-4 h-4 text-cyan-400" />
+                  <span className="text-xs text-gray-500">24h Volatility</span>
+                </div>
+                <p className={`text-lg font-bold ${(token.stats?.volatilityScore24h ?? 0) > 50 ? 'text-red-400' :
+                    (token.stats?.volatilityScore24h ?? 0) > 25 ? 'text-amber-400' : 'text-emerald-400'
                   }`}>
-                  <FiShield className="w-5 h-5" />
+                  {token.stats?.volatilityScore24h?.toFixed(1) ?? '-'}%
+                </p>
+              </div>
+
+              {/* Sentiment */}
+              <div className="bg-white/5 rounded-lg p-3">
+                <div className="flex items-center gap-2 mb-2">
+                  <FiTarget className="w-4 h-4 text-purple-400" />
+                  <span className="text-xs text-gray-500">Sentiment</span>
                 </div>
-                <div>
-                  <p className="text-xs text-gray-500">Risk Level</p>
-                  <p className="text-lg font-bold text-white">
-                    {token.pumpDumpRiskScore !== undefined
-                      ? token.pumpDumpRiskScore <= 30 ? 'Low' : token.pumpDumpRiskScore <= 60 ? 'Medium' : 'High'
-                      : '-'}
-                  </p>
+                <p className={`text-lg font-bold ${(token.sentimentScore ?? 50) >= 60 ? 'text-emerald-400' :
+                    (token.sentimentScore ?? 50) >= 40 ? 'text-gray-400' : 'text-red-400'
+                  }`}>
+                  {token.sentimentScore !== undefined ?
+                    (token.sentimentScore >= 60 ? 'Bullish' : token.sentimentScore >= 40 ? 'Neutral' : 'Bearish')
+                    : '-'
+                  }
+                </p>
+              </div>
+
+              {/* Circulating Supply */}
+              <div className="bg-white/5 rounded-lg p-3">
+                <div className="flex items-center gap-2 mb-2">
+                  <FiPercent className="w-4 h-4 text-amber-400" />
+                  <span className="text-xs text-gray-500">Circulating</span>
                 </div>
+                <p className="text-lg font-bold text-white">
+                  {token.circulatingSupplyPercentage !== undefined
+                    ? `${(token.circulatingSupplyPercentage * 100).toFixed(1)}%`
+                    : '-'
+                  }
+                </p>
+              </div>
+
+              {/* Last Updated */}
+              <div className="bg-white/5 rounded-lg p-3">
+                <div className="flex items-center gap-2 mb-2">
+                  <FiClock className="w-4 h-4 text-gray-400" />
+                  <span className="text-xs text-gray-500">Updated</span>
+                </div>
+                <p className="text-sm font-medium text-white">
+                  {token.updatedAt
+                    ? new Date(token.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                    : '-'
+                  }
+                </p>
               </div>
             </div>
           </div>
